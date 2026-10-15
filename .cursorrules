@@ -1,0 +1,39 @@
+# Project: FamilyTree
+
+Collaborative family tree viewer/editor. Phone-first, desktop-equal. Static site + Supabase Edge Function. See `docs/PLAN.md` for scope and phases, `docs/DATA_MODEL.md` for the schema.
+
+## JavaScript Module Architecture
+- **Configuration**: `/assets/js/config/app-config.js` (`FAMILYTREE_CONFIG.API_URL`, bucket URL base, limits).
+- **Utilities**: `/assets/js/utils/` (`api.js`, `tree-access.js` (share/contributor codes), `gen-date.js` (fuzzy genealogy dates), `kinship.js` (relationship calculator), `image-compress.js`, `brief-message.js`, `confirm-dialog.js`, `formatters.js`).
+- **Components**: `/assets/js/components/` (person-card, person-picker, event-editor, media-uploader, lightbox, pedigree-chart, descendants-chart, fan-chart, timeline, change-log-list).
+- **Pages**: `/assets/js/pages/` – one module per HTML page with an `init()`.
+- **Entry Point**: `/assets/js/main.js` routes by `document.body.dataset.page`.
+- **No Duplication**: common code must live in utils/components, never copied between pages.
+
+## HTML components
+- Shared header/nav/footer live in `/components/*.html` and are pasted into each page (no build step). Update the component file first, then propagate to every page.
+
+## Brief message (shared CursorSites pattern)
+- Canonical spec: `../cursor-sites-shared/ui/BRIEF_MESSAGE.md` – sync via `../cursor-sites-shared/scripts/sync-ui.ps1`.
+- Implementation: `BriefMessage.show(text, anchorEl, options)` in `/assets/js/utils/brief-message.js`; styles in `/assets/css/brief-message.css`.
+
+## Rules for AI (Cursor)
+1. **Script loading order**: config → utils → components → pages → main.js.
+2. **Relative paths only** (`assets/css/style.css`, not `/assets/...`). Never embed `http://localhost` or drive letters.
+3. **Both form factors**: every view must work at 360px wide (phone, touch) and at 1280px+ (desktop, mouse). Charts need pan/zoom by touch and by wheel/drag.
+4. **Access**: every API call carries the tree share code; mutations also carry the contributor token. The server is the authority – the browser never decides what is private.
+5. **Living persons**: never render birth dates/places or other private details of a living person unless the server returned them (it only does so for share-code holders).
+6. **Attribution**: every mutation writes a `change_log` row (actor display name + token hash, before/after JSON). Never bypass this.
+7. **Genealogy dates** are fuzzy. Store `date_text` (as typed), `date_sort` (approx date for ordering) and `date_qualifier`. Use `GenDate` helpers; never `new Date(text)` on user dates.
+8. **Soft delete**: persons, families, events, media use `deleted_at`; never hard-delete through the API except admin purge.
+9. **Images**: compress in the browser with `ImageCompress.compressToTarget` (≈100 KB JPEG) before sending base64 to the API. Never upload originals.
+10. **Charts are hand-rolled SVG** (no D3/library). Keep layout code pure (data in → node positions out) in `/assets/js/utils/layout-*.js` so it can be unit-tested with `node --test`.
+11. **Design for multiple trees**: every table has `tree_id`; UI is single-tree for now but never hard-code a tree.
+
+## CORS and fetch
+12. GET with no custom headers, or POST with `Content-Type: text/plain;charset=UTF-8` and a JSON string body (same as Scrabble/theConfessional). Responses are `{ error: string|null, data: any }`.
+
+## Shared Supabase database (Apps project)
+13. This app shares Supabase project `Apps` (`yzyipxvlsoxfphwobfkb`) with other CursorSites apps; our schema is `familytree`, our bucket is `familytree`. Migration history is global – **do not** `supabase db push` or repair/revert other apps' remote migrations.
+14. Schema changes: `supabase migration new …`, apply the same SQL with MCP `apply_migration` (schema-qualified), verify with `execute_sql`, commit the file. Edge Function: `supabase functions deploy familytree-api --no-verify-jwt`.
+15. Full procedure: `../cursor-sites-shared/supabase/SHARED_DATABASE.md` and `.cursor/rules/supabase-shared-db.mdc`.
