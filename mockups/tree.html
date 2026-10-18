@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Tree · Family Tree mockup</title>
+  <link rel="stylesheet" href="assets/mock.css" />
+</head>
+<body data-page="tree">
+  <header class="app-header"></header>
+  <nav class="sidenav" aria-label="Main"></nav>
+
+  <main class="app-main app-main--flush">
+    <div class="tree-page">
+      <div class="tree-toolbar">
+        <div class="seg" id="viewSeg">
+          <button data-value="pedigree" aria-pressed="true">Ancestors</button>
+          <button data-value="descendants" aria-pressed="false">Descendants</button>
+          <button data-value="fan" aria-pressed="false">Fan</button>
+        </div>
+        <button class="tree-focus" id="focusBtn" title="Change focus person"></button>
+        <div class="stepper" title="Generations"><button id="genMinus" aria-label="Fewer generations">−</button><span id="genLabel"></span><button id="genPlus" aria-label="More generations">+</button></div>
+        <div class="seg hidden" id="spanSeg"><button data-value="180" aria-pressed="true">Half</button><button data-value="360" aria-pressed="false">Full</button></div>
+      </div>
+      <div class="chart-wrap" id="chartWrap">
+        <svg id="chart" xmlns="http://www.w3.org/2000/svg"><g id="chartG"></g></svg>
+        <div class="legend" id="legend"><span class="pat">Father's side</span><span class="mat">Mother's side</span></div>
+        <div class="chart-controls">
+          <button class="btn" id="zoomIn" aria-label="Zoom in">+</button>
+          <button class="btn" id="zoomOut" aria-label="Zoom out">−</button>
+          <button class="btn" id="fit" aria-label="Fit to screen" title="Fit to screen">⤢</button>
+        </div>
+        <div class="chart-info hidden" id="info"></div>
+      </div>
+    </div>
+  </main>
+
+  <nav class="tabbar" aria-label="Main"></nav>
+
+  <script src="assets/mock-data.js"></script>
+  <script src="assets/mock-store.js"></script>
+  <script src="assets/mock-ui.js"></script>
+  <script src="assets/charts.js"></script>
+  <script src="assets/pages/tree.js"></script>
+</body>
+</html>

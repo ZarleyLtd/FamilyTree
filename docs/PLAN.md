@@ -1,12 +1,12 @@
 # FamilyTree – development plan
 
-_Last updated: 2026-10-15_
+_Last updated: 2026-10-18_
 
 ## 1. Goal
 
 A phone-first, desktop-equal web app for viewing and managing a family tree. Initially one family (ours), shared with siblings and cousins so we can build up a largely populated tree together. Designed so additional, unrelated families can be hosted later.
 
-## 2. Decisions (agreed 2026-10-15)
+## 2. Decisions (agreed 2026-10-15, auth updated 2026-10-18)
 
 | Topic | Decision |
 |-------|----------|
@@ -14,7 +14,7 @@ A phone-first, desktop-equal web app for viewing and managing a family tree. Ini
 | Architecture | Static HTML/CSS/vanilla JS + Supabase Edge Function `familytree-api`, same shape as BGS / Scrabble / theConfessional |
 | Database | Shared **Apps** Supabase project, new schema `familytree`. Migrate to a dedicated project later if storage quota demands |
 | Media | Supabase Storage bucket `familytree`; browser-side compression to low-res JPEG (≈100 KB) like the BGS gallery |
-| Auth | **No accounts.** Shared-document model: secret share code to view, contributor code to edit, device token + display name for attribution. Keep a clean path to Supabase Auth later |
+| Auth | **Share link to view; invite-code accounts to edit** (decided 2026-10-18). Viewing needs only the tree's secret share code. Editing needs a contributor identity: the admin issues a one-time **invite code**, the person registers with it (handle + display name + password of their choice), then signs in on any device with handle + password. Sessions are hashed, expiring tokens. No email dependency. Shape mirrors Supabase Auth so a later switch is painless |
 | Privacy | Living persons' details only returned to share-code holders; landing page without code shows nothing personal |
 | Data model | Persons, families, events, places, media, notes, change log now; sources/citations/repositories (GEDCOM/Gramps level) designed in but built later |
 | Edits | Direct edits by any contributor; every change logged with before/after; admin can revert |
@@ -25,15 +25,29 @@ A phone-first, desktop-equal web app for viewing and managing a family tree. Ini
 ### Access model in detail
 
 ```
-Tree ──┬── share_code        (e.g. K7PX2Q)   → ?t=K7PX2Q, stored in localStorage → read access incl. living persons
-       └── contributor_code  (admin-chosen)  → entered once → API returns contributor token → write access, attributed edits
-Admin  ─── admin_code        (admin-chosen)  → tree settings, codes, change-log revert, purge
+Viewing     tree.share_code          → ?t=K7PX2Q stored in localStorage. Anyone with the link sees the tree, including living persons.
+Editing     contributor identity     → one row per person (not per device). Same handle + password on phone, laptop, or a new session.
+Admin       tree.admin_code_hash     → unlocks admin page: invites, reset codes, disable, revert, purge.
 ```
 
-- Devices without a share code get a landing page only ("Ask a family member for the link").
-- Contributor registration: `registerContributor(treeCode, contributorCode, displayName)` → `{ contributorToken }` (hash stored). Every mutation carries the token; `change_log` records `actor_name` and `actor_token_hash`.
-- Rotating codes revokes access (as with sharing a doc link).
-- Future accounts: add `auth_user_id` to `contributors`; nothing else changes.
+**Viewing.** Devices without a share code get a landing page only ("Ask a family member for the link"). Rotating the share code revokes view access (as with sharing a doc link).
+
+**Becoming a contributor (admin-gated, no email).**
+
+1. Admin issues a one-time **invite code** (optionally labelled, e.g. "for Siobhán") from the admin page. The code is shown once so it can be sent in a message.
+2. The person **Registers**: invite code + unique handle + display name + password of their choice. The invite is marked claimed and cannot be reused. A `contributors` row is the identity.
+3. Later, on any device or session, they **Connect** with handle + password. The server issues a random **session token** (hash stored in `sessions`, ~90-day sliding expiry). Mutations carry that token; `change_log` records `actor_id` + `actor_name`.
+4. **Forgot password:** they cannot reuse the original invite. They ask the admin, who issues a one-time **reset code** (expires after use or 24 h). They enter handle + reset code + new password. If they have lost both password and a way to reach the admin, the admin disables the old row and issues a fresh invite.
+
+**Why this shape.** `contributors` is the person; `sessions` is "this browser is signed in as that person". Switching later to Supabase Auth is swapping how a session is proven (`auth_user_id` on `contributors`) — the rest of the schema and change log stay the same.
+
+**Security the Edge Function must own** (this is real auth, unlike the sibling apps):
+
+- Passwords hashed with bcrypt or argon2id; never stored or compared in plaintext.
+- Invite and reset codes stored as hashes; plaintext shown to the admin once, then discarded.
+- Session tokens random, stored hashed, never put in a URL.
+- Rate-limit `register`, `connect`, `resetPassword` per IP and per handle.
+- Disable a contributor (`disabled_at`) immediately invalidates their sessions.
 
 ## 3. Feature review – what mainstream tools offer
 
@@ -58,11 +72,11 @@ Each phase ends with: deployed Edge Function, migration applied, site live on Pa
 - [x] Repo, README, `.cursorrules`, docs, `.gitignore`, shared-DB rule
 - [ ] Sync `brief-message` from `cursor-sites-shared`; add `docs/UI_BRIEF_MESSAGE.md`
 - [ ] `supabase/config.toml`, migration `familytree_schema` (see DATA_MODEL.md), bucket `familytree`
-- [ ] Edge Function `familytree-api` skeleton: CORS, `{error,data}` envelope, action router, tree-code guard, `getTree`, `registerContributor`, `whoAmI`
+- [ ] Edge Function `familytree-api` skeleton: CORS, `{error,data}` envelope, action router, tree-code guard, `lookupTree`, `register`, `connect`, `whoAmI`, `signOut`
 - [ ] `assets/css/style.css` design tokens (CSS variables), responsive shell (header, bottom nav on phone, side nav on desktop), `components/header.html`, `footer.html`
-- [ ] `app-config.js`, `api.js`, `tree-access.js` (code capture from `?t=`, localStorage, contributor token)
-- [ ] `index.html` landing: with code → tree home (name, counts, recent changes, search box, quick links); without code → "ask for the link"
-- [ ] Create the first tree row (our family) with share/contributor/admin codes
+- [ ] `app-config.js`, `api.js`, `tree-access.js` (share-code capture from `?t=` into localStorage; session token for edits)
+- [ ] `index.html` landing: with share code → tree home; without → "ask for the link". Header: Connect / Register / signed-in chip
+- [ ] Create the first tree row (our family) with share + admin codes; seed the first admin contributor (or register via a bootstrap invite)
 - [ ] GitHub Pages enabled and verified
 
 ### Phase 1 – People & relationships (MVP)
@@ -92,13 +106,13 @@ Each phase ends with: deployed Edge Function, migration applied, site live on Pa
 - [ ] **Hourglass**: ancestors above + descendants below a focus person
 - [ ] **Fan chart**: SVG arcs, 4–6 generations, 180°/360°, colour by paternal/maternal line, tap to recentre
 - [ ] **Pan/zoom** for all charts: pointer events (drag, pinch, wheel), fit-to-screen, recentre
-- [ ] **Relationship calculator** (`kinship.js`): BFS to common ancestors → "X is Y's second cousin once removed", path rendered as a mini chart; "How am I related?" uses the device's "this is me" person
+- [ ] **Relationship calculator** (`kinship.js`): BFS to common ancestors → "X is Y's second cousin once removed", path rendered as a mini chart; "How am I related?" uses the signed-in contributor's `self_person_id`
 - [ ] **Timeline** on profile (events + photos by date); **surname index**; **statistics** page section; "on this day" on home
 - [ ] Share/deep-link buttons (copy link includes `?t=`)
 
 ### Phase 4 – Collaboration quality
 
-- [ ] **Admin page** `admin.html`: tree settings, rotate codes, contributors list (rename/disable), full change log with diff view and **revert**, purge soft-deleted
+- [ ] **Admin page** `admin.html` (unlocked with admin code): tree settings, rotate share/admin codes, **issue invite**, **issue password-reset code**, contributors list (rename / disable / make admin), sessions, full change log with diff view and **revert**, purge soft-deleted
 - [ ] **Duplicate detection** (same surname + similar given name + birth year ±2) when adding; **merge persons** tool
 - [ ] **Research notes / to-dos** per person ("find marriage record"), open-items list
 - [ ] **Data quality report**: persons with no parents, no dates, children born before parents, etc.
@@ -145,6 +159,7 @@ Each phase ends with: deployed Edge Function, migration applied, site live on Pa
 ## 8. Risks / open items
 
 - Shared Supabase storage quota (free tier 1 GB) – mitigated by ≈100 KB images and admin usage display; migrate to dedicated project if needed.
-- Link-based access is "anyone with the link"; acceptable per decision, codes can be rotated.
+- Link-based **view** access is "anyone with the link"; acceptable per decision, the share code can be rotated. Editing is a person identity (handle + password), not a shared edit code.
+- Custom password auth is security-sensitive code we own (hashing, sessions, rate limits). Keep it small and isolated in the Edge Function so a later switch to Supabase Auth is a swap of `connect`/`register`, not of the rest of the API.
 - Hand-rolled chart layouts take longer than a library; mitigated by pure, tested layout functions and starting with pedigree (simplest).
 - Fuzzy-date parsing edge cases (Irish records: "circa", "Q2 1864" civil registration quarters) – parser must accept quarter dates.

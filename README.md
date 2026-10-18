@@ -1,6 +1,6 @@
 # FamilyTree (CursorSites)
 
-A web app for viewing and collaboratively building a family tree. Designed for phones first, with an equally usable desktop layout. Shared with siblings and cousins via a secret link (no accounts), so the family can populate the tree together over time.
+A web app for viewing and collaboratively building a family tree. Designed for phones first, with an equally usable desktop layout. Shared with siblings and cousins via a secret link to **view**; people the admin invites **register** with a handle and password so they can edit from any device.
 
 Live site (GitHub Pages): https://zarleyltd.github.io/FamilyTree/
 
@@ -17,7 +17,7 @@ Same shape as the other CursorSites apps (BGS, Scrabble, theConfessional):
 ## Access model
 
 - A tree has a secret **share code**. Opening `index.html?t=<CODE>` once stores it on the device; without it the site shows only a landing page.
-- A separate **contributor code** unlocks editing. Entering it once registers the device (display name + token) so every change is attributed in the change log.
+- **Editing** is a person identity, not a device: the admin issues a one-time invite code; the person registers (handle + display name + password) and later connects on any device with handle + password. Sessions expire; the admin can issue a reset code if a password is forgotten.
 - Living persons' details are only shown to devices that hold the share code.
 
 ## Documents

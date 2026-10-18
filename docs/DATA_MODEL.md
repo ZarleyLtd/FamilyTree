@@ -12,25 +12,59 @@ Conventions: `id uuid primary key default gen_random_uuid()`, `created_at/update
 | id | uuid | |
 | name | text | e.g. "Power family" |
 | slug | text unique | url-safe |
-| share_code | text unique | 6–8 chars, read access |
-| contributor_code_hash | text | bcrypt/sha256 of edit code |
-| admin_code_hash | text | |
+| share_code | text unique | 6–8 chars, read access for anyone with the link |
+| admin_code_hash | text | bcrypt/argon2 of the admin unlock code |
 | settings | jsonb | `{ homePersonId, livingAgeLimit: 110, defaultChartGenerations: 4 }` |
 | created_at, updated_at | timestamptz | |
 
-### `contributors`
-Device registrations, not accounts.
+### `invites`
+One-time codes the admin issues so a person can register (or reset a password). Plaintext is shown once and never stored.
 | column | type | notes |
 |--------|------|-------|
 | id | uuid | |
 | tree_id | uuid → trees | |
-| display_name | text | shown in change log |
-| token_hash | text unique | hash of the contributor token issued to the device |
+| purpose | text | `register` \| `reset` |
+| code_hash | text unique | hash of the code shown to the admin |
+| label | text null | admin note, e.g. "for Siobhán" – not shown to the registrant |
+| contributor_id | uuid → contributors null | required for `reset`; null until a `register` invite is claimed |
+| created_by | uuid → contributors | the admin who issued it |
+| expires_at | timestamptz | register: e.g. 30 days; reset: 24 hours |
+| used_at | timestamptz null | set on successful register/reset; code cannot be reused |
+| created_at | timestamptz | |
+
+Index `(tree_id, used_at)` for the admin "pending invites" list.
+
+### `contributors`
+One row per **person** who can edit, not per device. Same handle + password on phone, laptop, or a new session.
+| column | type | notes |
+|--------|------|-------|
+| id | uuid | |
+| tree_id | uuid → trees | |
+| handle | text | unique per tree; used to Connect. Stored lowercased. |
+| display_name | text | shown in the change log; may differ from handle |
+| password_hash | text | bcrypt or argon2id |
 | role | text | `contributor` \| `admin` |
-| self_person_id | uuid → persons null | "this is me" for relationship calculator |
-| disabled_at | timestamptz null | revoke |
-| last_seen_at, created_at | timestamptz | |
-| auth_user_id | uuid null | reserved for future Supabase Auth |
+| self_person_id | uuid → persons null | "this is me" for the relationship calculator |
+| invite_id | uuid → invites null | the register-invite that created this row |
+| disabled_at | timestamptz null | revoke; also deletes/invalidates sessions |
+| last_seen_at, created_at, updated_at | timestamptz | |
+| auth_user_id | uuid null | reserved: if we later switch to Supabase Auth, this is the mapping |
+
+Unique `(tree_id, handle)`.
+
+### `sessions`
+Proof that a browser is signed in as a contributor. Mutations send the session token; the server hashes it and looks up this row.
+| column | type | notes |
+|--------|------|-------|
+| id | uuid | |
+| contributor_id | uuid → contributors | |
+| token_hash | text unique | hash of the random token issued at Connect / Register |
+| created_at | timestamptz | |
+| expires_at | timestamptz | default now() + 90 days; sliding renewal on use |
+| last_seen_at | timestamptz | |
+| revoked_at | timestamptz null | sign-out, password reset, or contributor disabled |
+
+On password reset, disable, or admin "sign out everywhere": set `revoked_at` on all of that contributor's sessions.
 
 ### `persons`
 | column | type | notes |
@@ -162,8 +196,8 @@ Written by the API for every mutation.
 |--------|------|-------|
 | id | bigserial | |
 | tree_id | uuid → trees | |
-| actor_name | text | contributor display name |
-| actor_token_hash | text null | |
+| actor_id | uuid → contributors null | identity; survives a later display-name change |
+| actor_name | text | display name copied at the time of the edit |
 | action | text | `create` `update` `delete` `restore` `merge` `upload` `revert` |
 | target_type | text | table name |
 | target_id | uuid | |

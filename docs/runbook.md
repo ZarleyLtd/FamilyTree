@@ -24,7 +24,7 @@ Confirm `assets/js/config/app-config.js` → `API_URL = https://yzyipxvlsoxfphwo
 
 ## First tree
 
-After the schema migration, insert the first tree row (SQL editor or `execute_sql`), choosing a share code and hashing the contributor/admin codes the same way the Edge Function does (documented in the function header). Then open `index.html?t=<share code>`.
+After the schema migration, insert the first tree row (SQL editor or `execute_sql`), choosing a share code and hashing the admin code the same way the Edge Function does (documented in the function header). Create a bootstrap register-invite (or a first admin `contributors` row). Then open `index.html?t=<share code>`.
 
 ## Frontend
 
@@ -34,7 +34,7 @@ Static files; `npx serve .` locally or GitHub Pages (`main`, root). Relative pat
 
 1. Open the site without `?t=` → landing page only, no personal data.
 2. Open with `?t=<code>` → tree home loads; reload without the query string still works (code stored).
-3. Register as contributor with the contributor code → add a person with an approximate birth date → appears in People and Recent changes.
+3. Register as a contributor with a one-time invite (handle + password) → Connect on a second browser/profile with the same handle → add a person with an approximate birth date → appears in People and Recent changes, attributed to that handle.
 4. Add a parent and a partner → pedigree shows them; tap to recentre.
 5. (Phase 2) Upload a photo from a phone → appears on profile and in Gallery, file ≤ 150 KB in Storage.
 6. Check both at 360px wide (devtools phone emulation or a real phone) and at desktop width.

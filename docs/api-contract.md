@@ -5,7 +5,7 @@ Supabase Edge Function, deployed with `--no-verify-jwt`. All responses are JSON 
 ## Transport
 
 - **GET** `?action=…&treeCode=…&…` with no custom headers.
-- **POST** body is a JSON string with `Content-Type: text/plain;charset=UTF-8`: `{ "action": "…", "treeCode": "…", "contributorToken": "…", …params }`.
+- **POST** body is a JSON string with `Content-Type: text/plain;charset=UTF-8`: `{ "action": "…", "treeCode": "…", "sessionToken": "…", …params }`.
 - CORS: `Access-Control-Allow-Origin: *`.
 
 ## Access parameters
@@ -13,8 +13,8 @@ Supabase Edge Function, deployed with `--no-verify-jwt`. All responses are JSON 
 | Param | Required for | Notes |
 |-------|--------------|-------|
 | `treeCode` | all actions except `lookupTree` | share code; invalid → 403 |
-| `contributorToken` | all mutations | issued by `registerContributor`; disabled/unknown → 403 |
-| `adminCode` | admin actions | tree admin code |
+| `sessionToken` | all mutations, `whoAmI`, `signOut` | issued by `register` / `connect`; unknown, expired, revoked, or contributor disabled → 403 |
+| `adminCode` | admin actions that are not already gated by an admin-role session | tree admin unlock code. Prefer an admin-role session after `unlockAdmin`. |
 
 Living-person detail is only returned when `treeCode` is valid (which is every normal call). A future public mode would omit the code and receive redacted data.
 
@@ -23,9 +23,13 @@ Living-person detail is only returned when `treeCode` is valid (which is every n
 | Action | Method | Purpose |
 |--------|--------|---------|
 | `lookupTree` | GET | `{ treeCode }` → `{ id, name, personCount, settings.homePersonId }` or 404 |
-| `registerContributor` | POST | `{ treeCode, contributorCode, displayName }` → `{ contributorToken, role }` |
-| `whoAmI` | GET | `{ treeCode, contributorToken }` → `{ displayName, role, selfPersonId }` |
+| `register` | POST | `{ treeCode, inviteCode, handle, displayName, password }` → `{ sessionToken, contributor }`. Invite must be unused, unexpired, `purpose=register`. Handle unique per tree (case-insensitive). Rate-limited. |
+| `connect` | POST | `{ treeCode, handle, password }` → `{ sessionToken, contributor }`. Rate-limited. Disabled contributors → 403. |
+| `resetPassword` | POST | `{ treeCode, handle, resetCode, newPassword }` → `{ ok: true }`. Invite must be unused, unexpired, `purpose=reset`, matching `contributor_id`. Revokes existing sessions. Rate-limited. |
+| `signOut` | POST | `{ sessionToken }` → `{ ok: true }` (revokes that session) |
+| `whoAmI` | GET | `{ treeCode, sessionToken }` → `{ id, handle, displayName, role, selfPersonId }` |
 | `setSelfPerson` | POST | `{ personId }` |
+| `unlockAdmin` | POST | `{ treeCode, sessionToken, adminCode }` → `{ ok: true }` if the code matches; caller should already be a signed-in contributor. Admin-role contributors skip this. |
 | `listPersons` | GET | `{ q?, surname?, living?, hasPhoto?, limit?, offset? }` → `{ persons: PersonSummary[] }` |
 | `getPerson` | GET | `{ id }` → `{ person, events, parents: Family[], families: Family[] (with children), media, notes }` |
 | `createPerson` | POST | `{ person: {...}, birth?: EventInput, death?: EventInput }` → `{ person }` |
@@ -67,9 +71,14 @@ Living-person detail is only returned when `treeCode` is valid (which is every n
 
 | Action | Method | Purpose |
 |--------|--------|---------|
-| `getTreeSettings` / `updateTreeSettings` | | `{ adminCode }` |
-| `rotateCodes` | POST | `{ adminCode, which: 'share' \| 'contributor' \| 'admin', newCode? }` |
-| `listContributors` / `updateContributor` | | rename, disable |
+| `getTreeSettings` / `updateTreeSettings` | | admin session or `adminCode` |
+| `rotateCodes` | POST | `{ which: 'share' \| 'admin', newCode? }` |
+| `issueInvite` | POST | `{ purpose: 'register' \| 'reset', label?, contributorId? }` → `{ code, expiresAt }` (plaintext code once) |
+| `listInvites` | GET | pending (unused, unexpired) invites |
+| `revokeInvite` | POST | `{ inviteId }` |
+| `listContributors` / `updateContributor` | | rename display name, change role, disable (revokes sessions) |
+| `listSessions` | GET | `{ contributorId? }` |
+| `revokeSessions` | POST | `{ contributorId }` sign out everywhere |
 | `changeLog` | GET | `{ adminCode, limit, offset, targetId? }` |
 | `revertChange` | POST | `{ adminCode, changeId }` |
 | `findDuplicates` | GET | |
@@ -91,5 +100,6 @@ PersonSummary {
 }
 EventInput { type, dateText?, placeText?, description? }
 Family { id, partner1: PersonSummary|null, partner2: PersonSummary|null, relationshipType, status, children: (PersonSummary & { relationType })[] , marriage?: Event }
-ChangeLogRow { id, actorName, action, targetType, targetId, summary, createdAt }
+ChangeLogRow { id, actorId, actorName, action, targetType, targetId, summary, createdAt }
+Contributor { id, handle, displayName, role, selfPersonId }
 ```

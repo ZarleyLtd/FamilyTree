@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>People · Family Tree mockup</title>
+  <link rel="stylesheet" href="assets/mock.css" />
+</head>
+<body data-page="people">
+  <header class="app-header"></header>
+  <nav class="sidenav" aria-label="Main"></nav>
+
+  <main class="app-main">
+    <div class="people-toolbar">
+      <div class="search"><span class="ico">🔍</span><input type="search" id="q" placeholder="Search by name, nickname or year" autocomplete="off" /></div>
+      <div class="chip-row" id="filters"></div>
+      <div class="sort-row"><span id="count"></span><span>Sort: <button class="btn btn--sm btn--ghost" id="sortBtn">Surname</button></span></div>
+    </div>
+    <div class="people-layout">
+      <div class="card" id="list" style="padding-top:.2rem;padding-bottom:.2rem"></div>
+      <nav class="alpha-index" id="alpha" aria-label="Jump to letter"></nav>
+    </div>
+  </main>
+
+  <button class="fab" id="fabAdd" aria-label="Add person" title="Add person">+</button>
+  <nav class="tabbar" aria-label="Main"></nav>
+
+  <script src="assets/mock-data.js"></script>
+  <script src="assets/mock-store.js"></script>
+  <script src="assets/mock-ui.js"></script>
+  <script src="assets/pages/people.js"></script>
+</body>
+</html>

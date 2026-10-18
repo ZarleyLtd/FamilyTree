@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Home · Family Tree mockup</title>
+  <link rel="stylesheet" href="assets/mock.css" />
+</head>
+<body data-page="home">
+  <header class="app-header"></header>
+  <nav class="sidenav" aria-label="Main"></nav>
+
+  <main class="app-main">
+    <div class="banner" id="mockBanner">UI mockup with fictional data – nothing is saved to a server. <button id="btnReset">Reset sample data</button></div>
+
+    <div class="search-wrap">
+      <div class="search"><span class="ico">🔍</span><input type="search" id="homeSearch" placeholder="Search people, e.g. “Brennan 1913”" autocomplete="off" /></div>
+      <div class="search-results hidden" id="homeResults"></div>
+    </div>
+
+    <section class="card" id="meCard"></section>
+
+    <div class="stat-grid" id="stats"></div>
+
+    <div class="two-col" style="margin-top:.9rem">
+      <section class="card">
+        <div class="card__head"><h2>Recent changes</h2><a class="btn btn--sm btn--ghost" href="admin.html#log">All</a></div>
+        <div id="changes"></div>
+      </section>
+      <div>
+        <section class="card">
+          <div class="card__head"><h2>This month in the family</h2></div>
+          <div id="onThisDay"></div>
+        </section>
+        <section class="card">
+          <div class="card__head"><h2>Surnames</h2><a class="btn btn--sm btn--ghost" href="people.html">People</a></div>
+          <div class="chip-row" id="surnames" style="flex-wrap:wrap"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <button class="fab" id="fabAdd" aria-label="Add person" title="Add person">+</button>
+  <nav class="tabbar" aria-label="Main"></nav>
+
+  <script src="assets/mock-data.js"></script>
+  <script src="assets/mock-store.js"></script>
+  <script src="assets/mock-ui.js"></script>
+  <script src="assets/pages/home.js"></script>
+</body>
+</html>

@@ -4,7 +4,7 @@ Collaborative family tree viewer/editor. Phone-first, desktop-equal. Static site
 
 ## JavaScript Module Architecture
 - **Configuration**: `/assets/js/config/app-config.js` (`FAMILYTREE_CONFIG.API_URL`, bucket URL base, limits).
-- **Utilities**: `/assets/js/utils/` (`api.js`, `tree-access.js` (share/contributor codes), `gen-date.js` (fuzzy genealogy dates), `kinship.js` (relationship calculator), `image-compress.js`, `brief-message.js`, `confirm-dialog.js`, `formatters.js`).
+- **Utilities**: `/assets/js/utils/` (`api.js`, `tree-access.js` (share code + session token), `gen-date.js` (fuzzy genealogy dates), `kinship.js` (relationship calculator), `image-compress.js`, `brief-message.js`, `confirm-dialog.js`, `formatters.js`).
 - **Components**: `/assets/js/components/` (person-card, person-picker, event-editor, media-uploader, lightbox, pedigree-chart, descendants-chart, fan-chart, timeline, change-log-list).
 - **Pages**: `/assets/js/pages/` – one module per HTML page with an `init()`.
 - **Entry Point**: `/assets/js/main.js` routes by `document.body.dataset.page`.
@@ -21,9 +21,9 @@ Collaborative family tree viewer/editor. Phone-first, desktop-equal. Static site
 1. **Script loading order**: config → utils → components → pages → main.js.
 2. **Relative paths only** (`assets/css/style.css`, not `/assets/...`). Never embed `http://localhost` or drive letters.
 3. **Both form factors**: every view must work at 360px wide (phone, touch) and at 1280px+ (desktop, mouse). Charts need pan/zoom by touch and by wheel/drag.
-4. **Access**: every API call carries the tree share code; mutations also carry the contributor token. The server is the authority – the browser never decides what is private.
+4. **Access**: every API call carries the tree share code; mutations also carry the **session token** (issued at register/connect). The server is the authority – the browser never decides what is private. Passwords, invite codes and session tokens are hashed server-side; never log them.
 5. **Living persons**: never render birth dates/places or other private details of a living person unless the server returned them (it only does so for share-code holders).
-6. **Attribution**: every mutation writes a `change_log` row (actor display name + token hash, before/after JSON). Never bypass this.
+6. **Attribution**: every mutation writes a `change_log` row (`actor_id` + display name at the time, before/after JSON). Never bypass this. Identity is the `contributors` row, not a device.
 7. **Genealogy dates** are fuzzy. Store `date_text` (as typed), `date_sort` (approx date for ordering) and `date_qualifier`. Use `GenDate` helpers; never `new Date(text)` on user dates.
 8. **Soft delete**: persons, families, events, media use `deleted_at`; never hard-delete through the API except admin purge.
 9. **Images**: compress in the browser with `ImageCompress.compressToTarget` (≈100 KB JPEG) before sending base64 to the API. Never upload originals.
