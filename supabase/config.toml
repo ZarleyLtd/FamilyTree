@@ -1,0 +1,11 @@
+# Link to the shared CursorSites Apps project.
+# Run: supabase link --project-ref yzyipxvlsoxfphwobfkb
+# Schema changes: MCP apply_migration — never supabase db push.
+
+project_id = "apps"
+
+[api]
+enabled = true
+
+[functions.familytree-api]
+verify_jwt = false

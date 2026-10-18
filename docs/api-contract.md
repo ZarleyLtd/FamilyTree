@@ -22,12 +22,14 @@ Living-person detail is only returned when `treeCode` is valid (which is every n
 
 | Action | Method | Purpose |
 |--------|--------|---------|
+| `status` | GET | (no tree code) → `{ hasTrees: boolean }` so the landing page can offer first-tree setup |
+| `bootstrapTree` | POST | `{ name? }` → `{ tree, shareCode, adminCode, inviteCode, expiresAt }`. Only when there are zero trees. Codes shown once. |
 | `lookupTree` | GET | `{ treeCode }` → `{ id, name, personCount, settings.homePersonId }` or 404 |
-| `register` | POST | `{ treeCode, inviteCode, handle, displayName, password }` → `{ sessionToken, contributor }`. Invite must be unused, unexpired, `purpose=register`. Handle unique per tree (case-insensitive). Rate-limited. |
+| `register` | POST | `{ treeCode, inviteCode, handle, displayName, password }` → `{ sessionToken, contributor }`. Invite must be unused, unexpired, `purpose=register`. Handle unique per tree (case-insensitive). The first contributor on a tree is `admin`. Rate-limited. |
 | `connect` | POST | `{ treeCode, handle, password }` → `{ sessionToken, contributor }`. Rate-limited. Disabled contributors → 403. |
 | `resetPassword` | POST | `{ treeCode, handle, resetCode, newPassword }` → `{ ok: true }`. Invite must be unused, unexpired, `purpose=reset`, matching `contributor_id`. Revokes existing sessions. Rate-limited. |
 | `signOut` | POST | `{ sessionToken }` → `{ ok: true }` (revokes that session) |
-| `whoAmI` | GET | `{ treeCode, sessionToken }` → `{ id, handle, displayName, role, selfPersonId }` |
+| `whoAmI` | POST | `{ treeCode, sessionToken }` → `{ id, handle, displayName, role, selfPersonId }`. POST so the session token is not placed in a URL. |
 | `setSelfPerson` | POST | `{ personId }` |
 | `unlockAdmin` | POST | `{ treeCode, sessionToken, adminCode }` → `{ ok: true }` if the code matches; caller should already be a signed-in contributor. Admin-role contributors skip this. |
 | `listPersons` | GET | `{ q?, surname?, living?, hasPhoto?, limit?, offset? }` → `{ persons: PersonSummary[] }` |

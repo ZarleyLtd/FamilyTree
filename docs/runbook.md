@@ -22,9 +22,19 @@ supabase functions deploy familytree-api --no-verify-jwt
 
 Confirm `assets/js/config/app-config.js` → `API_URL = https://yzyipxvlsoxfphwobfkb.supabase.co/functions/v1/familytree-api`.
 
+## Hashing (Edge Function)
+
+Keep this in sync with the header comment on `supabase/functions/familytree-api/index.ts`:
+
+- **Passwords** and the **admin unlock code**: bcrypt (bcryptjs, cost 10).
+- **Invite / reset codes** and **session tokens**: SHA-256 hex of the normalized plaintext (codes uppercased; handles lowercased).
+- **Share codes** are stored in plaintext (they are the view secret, like a document link). Generated from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`.
+
 ## First tree
 
-After the schema migration, insert the first tree row (SQL editor or `execute_sql`), choosing a share code and hashing the admin code the same way the Edge Function does (documented in the function header). Create a bootstrap register-invite (or a first admin `contributors` row). Then open `index.html?t=<share code>`.
+Open the site **without** a `?t=` code. If the API reports no trees, the landing page offers **Create the tree**. That calls `bootstrapTree` and shows the share code, admin code, and first-register invite **once**. Copy them somewhere safe.
+
+The first person to **Register** with that invite becomes `admin`. Then open `index.html?t=<share code>` (also stored in `localStorage` after you open it once).
 
 ## Frontend
 

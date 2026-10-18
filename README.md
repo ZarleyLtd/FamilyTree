@@ -28,6 +28,7 @@ Same shape as the other CursorSites apps (BGS, Scrabble, theConfessional):
 | [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | Schema design for `familytree` |
 | [docs/api-contract.md](docs/api-contract.md) | `familytree-api` actions |
 | [docs/runbook.md](docs/runbook.md) | Deploy / migrate / smoke test |
+| [docs/UI_BRIEF_MESSAGE.md](docs/UI_BRIEF_MESSAGE.md) | Brief-message UI pattern (synced) |
 | [.cursorrules](.cursorrules) | Project conventions for AI-assisted editing |
 
 ## Local development

@@ -1,0 +1,283 @@
+window.FamilyTreeHome = (function () {
+  'use strict';
+
+  var A, API, U, F;
+
+  function $(sel, root) {
+    return (root || document).querySelector(sel);
+  }
+
+  function showLanding(opts) {
+    opts = opts || {};
+    document.body.classList.add('page-landing');
+    U.renderShell({ title: 'Family tree', landing: true, search: false });
+    var main = $('.app-main');
+    var emptySetup = opts.hasTrees === false;
+    var html =
+      '<div class="landing">' +
+      '<div class="tree-mark" aria-hidden="true">\uD83C\uDF33</div>' +
+      '<h1>Family Tree</h1>' +
+      '<p class="muted">A shared tree for the family. Anyone with the link can look around; people the admin invites can add and edit from any device.</p>';
+    if (opts.error) {
+      html += '<p class="muted" style="color:var(--danger)">' + U.esc(opts.error) + '</p>';
+    }
+    html +=
+      '<section class="card">' +
+      '<div class="field"><label for="pasteCode">I have a share code</label>' +
+      '<input type="text" id="pasteCode" placeholder="e.g. K7PX2Q" autocomplete="off" /></div>' +
+      '<button class="btn btn--primary btn--block" type="button" id="openCode">Open the tree</button>' +
+      '<p class="muted small" style="margin-top:.6rem">Ask a family member for the link if you do not have a code.</p>' +
+      '</section>';
+    if (emptySetup) {
+      html +=
+        '<section class="card" id="setupCard">' +
+        '<h2>Set up this family\u2019s tree</h2>' +
+        '<p class="muted small">No tree exists yet. Creating one shows the share, admin and first-invite codes <strong>once</strong> \u2014 copy them somewhere safe.</p>' +
+        '<div class="field"><label for="treeName">Tree name</label>' +
+        '<input type="text" id="treeName" value="Family tree" maxlength="80" /></div>' +
+        '<p class="muted small" id="setupErr"></p>' +
+        '<button class="btn btn--warm btn--block" type="button" id="bootstrapGo">Create the tree</button>' +
+        '</section>';
+    }
+    html += '</div>';
+    main.innerHTML = html;
+    $('#openCode').addEventListener('click', function () {
+      var code = $('#pasteCode').value;
+      if (!code.trim()) {
+        U.brief('Enter a share code', $('#pasteCode'));
+        return;
+      }
+      A.setShareCode(code);
+      location.href = 'index.html?t=' + encodeURIComponent(A.getShareCode());
+    });
+    var boot = $('#bootstrapGo');
+    if (boot) {
+      boot.addEventListener('click', function () {
+        var errEl = $('#setupErr');
+        errEl.textContent = '';
+        boot.disabled = true;
+        API.bootstrapTree({ name: $('#treeName').value })
+          .then(function (data) {
+            A.setShareCode(data.shareCode);
+            main.innerHTML =
+              '<div class="landing"><div class="tree-mark" aria-hidden="true">\uD83C\uDF33</div>' +
+              '<h1>' +
+              U.esc(data.tree.name) +
+              '</h1>' +
+              '<section class="card codes-once"><h2>Save these codes now</h2>' +
+              '<p class="muted small">They are not stored in plaintext after this. The first person to register with the invite becomes an admin.</p>' +
+              kvRow('Share code', data.shareCode, 'Anyone with this can view') +
+              kvRow('Admin code', data.adminCode, 'Unlocks the admin page') +
+              kvRow('First invite', data.inviteCode, 'One-time register for the first admin') +
+              '<div class="btn-row" style="margin-top:1rem">' +
+              '<button class="btn btn--primary" type="button" id="goTree">Open the tree</button>' +
+              '<button class="btn" type="button" id="goReg">Register as first admin</button>' +
+              '</div></section></div>';
+            $('#goTree').onclick = function () {
+              location.href = 'index.html?t=' + encodeURIComponent(data.shareCode);
+            };
+            $('#goReg').onclick = function () {
+              location.href = 'index.html?t=' + encodeURIComponent(data.shareCode) + '&register=1';
+            };
+          })
+          .catch(function (e) {
+            errEl.textContent = e.message || 'Could not create the tree';
+            boot.disabled = false;
+          });
+      });
+    }
+  }
+
+  function kvRow(label, value, hint) {
+    return (
+      '<div class="kv"><div class="kv__k">' +
+      U.esc(label) +
+      '</div><div><span class="code">' +
+      U.esc(value) +
+      '</span><div class="kv__v">' +
+      U.esc(hint) +
+      '</div></div>' +
+      '<button class="btn btn--sm" type="button" data-copy="' +
+      U.esc(value) +
+      '">Copy</button></div>'
+    );
+  }
+
+  function bindCopy() {
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-copy]');
+      if (!btn) return;
+      var text = btn.getAttribute('data-copy');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () {
+          U.brief('Copied', btn);
+        });
+      }
+    });
+  }
+
+  function renderHome(tree, stats, changes, me) {
+    document.body.classList.remove('page-landing');
+    U.renderShell({ title: tree.name, subtitle: 'Shared family tree' });
+    var main = $('.app-main');
+    var signedIn = !!me;
+    var hero;
+    if (signedIn) {
+      hero =
+        '<div class="hero-me"><span class="avatar avatar--lg">' +
+        U.esc(F.initialsFromName(me.displayName)) +
+        '</span><div class="hero-me__body"><div class="muted small">Signed in as ' +
+        U.esc(me.handle) +
+        '</div><div class="hero-me__name">' +
+        U.esc(me.displayName) +
+        '</div>' +
+        '<div class="muted small">' +
+        U.esc(me.role) +
+        ' \u00b7 Connect on any device with this handle</div></div></div>' +
+        '<div class="quick-grid">' +
+        '<a class="quick" href="tree.html"><span class="ico">\uD83C\uDF33</span>Tree</a>' +
+        '<a class="quick" href="people.html"><span class="ico">\uD83D\uDC65</span>People</a>' +
+        '<a class="quick" href="#" id="qAdd"><span class="ico">\u2795</span>Add person</a>' +
+        '<a class="quick" href="admin.html"><span class="ico">\u2699\uFE0F</span>Admin</a>' +
+        '</div>';
+    } else {
+      hero =
+        '<div class="hero-me"><span class="avatar avatar--lg">\uD83C\uDF33</span>' +
+        '<div class="hero-me__body"><div class="muted small">You are browsing</div><div class="hero-me__name">' +
+        U.esc(tree.name) +
+        '</div>' +
+        '<div class="muted small">Viewing as a guest. Connect to add people and photos.</div></div></div>' +
+        '<div class="quick-grid">' +
+        '<a class="quick" href="tree.html"><span class="ico">\uD83C\uDF33</span>Tree</a>' +
+        '<a class="quick" href="people.html"><span class="ico">\uD83D\uDC65</span>People</a>' +
+        '<a class="quick" href="#" id="qAdd"><span class="ico">\u2795</span>Add person</a>' +
+        '<a class="quick" href="#" id="qConnect"><span class="ico">\uD83D\uDD11</span>Connect</a>' +
+        '</div>';
+    }
+    var changeHtml =
+      changes && changes.length
+        ? changes
+            .map(function (c) {
+              return (
+                '<div class="change"><span class="change__who">' +
+                U.esc((c.actorName || '?')[0]) +
+                '</span><span class="change__body">' +
+                U.esc(c.summary || c.action) +
+                '<div class="change__meta">' +
+                U.esc(c.actorName || '') +
+                ' \u00b7 ' +
+                U.esc(F.relativeTime(c.createdAt)) +
+                '</div></span></div>'
+              );
+            })
+            .join('')
+        : '<p class="empty">No edits yet. When someone adds a person, it will show up here.</p>';
+    var surnameHtml =
+      stats.surnames && stats.surnames.length
+        ? stats.surnames
+            .slice(0, 8)
+            .map(function (s) {
+              return (
+                '<a class="chip" href="people.html" style="text-decoration:none">' +
+                U.esc(s.surname) +
+                ' <span class="muted">' +
+                s.count +
+                '</span></a>'
+              );
+            })
+            .join('')
+        : '<p class="empty">No surnames yet.</p>';
+    main.innerHTML =
+      '<div class="search-wrap">' +
+      '<div class="search"><span class="ico">\uD83D\uDD0D</span><input type="search" id="homeSearch" placeholder="Search people (coming in Phase 1)" autocomplete="off" /></div>' +
+      '</div>' +
+      '<section class="card" id="meCard">' +
+      hero +
+      '</section>' +
+      '<div class="stat-grid">' +
+      stat(stats.persons, 'people') +
+      stat(stats.living, 'living') +
+      stat(stats.families, 'families') +
+      stat(stats.media, 'photos & documents') +
+      '</div>' +
+      '<div class="two-col" style="margin-top:.9rem">' +
+      '<section class="card"><div class="card__head"><h2>Recent changes</h2></div><div id="changes">' +
+      changeHtml +
+      '</div></section>' +
+      '<section class="card"><div class="card__head"><h2>Surnames</h2><a class="btn btn--sm btn--ghost" href="people.html">People</a></div>' +
+      '<div class="chip-row" id="surnames" style="flex-wrap:wrap">' +
+      surnameHtml +
+      '</div></section>' +
+      '</div>' +
+      '<button class="fab" id="fabAdd" aria-label="Add person" title="Add person">+</button>';
+
+    function later(anchor) {
+      if (!U.requireContributor()) return;
+      U.brief('Adding people comes in the next phase', anchor);
+    }
+    var fab = $('#fabAdd');
+    if (fab) fab.addEventListener('click', function () { later(fab); });
+    var qAdd = $('#qAdd');
+    if (qAdd) {
+      qAdd.addEventListener('click', function (e) {
+        e.preventDefault();
+        later(qAdd);
+      });
+    }
+    var qConnect = $('#qConnect');
+    if (qConnect) {
+      qConnect.addEventListener('click', function (e) {
+        e.preventDefault();
+        U.openConnectSheet();
+      });
+    }
+    $('#homeSearch').addEventListener('focus', function () {
+      U.brief('People search arrives in Phase 1', this);
+    });
+  }
+
+  function stat(n, label) {
+    return '<div class="stat"><div class="stat__n">' + (n || 0) + '</div><div class="stat__l">' + label + '</div></div>';
+  }
+
+  function init() {
+    A = window.TreeAccess;
+    API = window.FamilyTreeAPI;
+    U = window.FamilyTreeUI;
+    F = window.Formatters;
+    bindCopy();
+    A.captureShareCode();
+    var code = A.getShareCode();
+    if (!code) {
+      API.status()
+        .then(function (s) {
+          showLanding({ hasTrees: !!(s && s.hasTrees) });
+        })
+        .catch(function () {
+          showLanding({ hasTrees: true, error: 'Could not reach the server. You can still paste a share code.' });
+        });
+      return;
+    }
+    Promise.all([API.lookupTree(code), U.refreshMe()])
+      .then(function (pair) {
+        var tree = pair[0];
+        var me = pair[1];
+        return Promise.all([API.stats(), API.recentChanges(8)]).then(function (rest) {
+          renderHome(tree, rest[0] || {}, (rest[1] && rest[1].changes) || [], me);
+          if (new URLSearchParams(location.search).get('register') === '1' && !me) {
+            U.openRegisterSheet();
+          }
+        });
+      })
+      .catch(function (e) {
+        if (e.status === 403 || e.status === 404) {
+          A.clearShareCode();
+          showLanding({ hasTrees: true, error: 'That share code is not valid.' });
+          return;
+        }
+        showLanding({ hasTrees: true, error: e.message || 'Could not load the tree.' });
+      });
+  }
+
+  return { init: init };
+})();

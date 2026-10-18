@@ -2,25 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Family Tree</title>
-  <style>
-    :root { --bg: #f6f2ea; --ink: #2b2a27; --accent: #5b7a4a; --muted: #6f6b63; }
-    * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--ink);
-           font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 1.5rem; }
-    main { max-width: 32rem; text-align: center; }
-    h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); margin: 0 0 .5rem; color: var(--accent); }
-    p { line-height: 1.5; color: var(--muted); }
-    .tree { font-size: 3rem; }
-  </style>
+  <link rel="stylesheet" href="assets/css/style.css" />
 </head>
 <body data-page="home">
-  <main>
-    <div class="tree" aria-hidden="true">🌳</div>
-    <h1>Family Tree</h1>
-    <p>Our shared family tree is being built. If you were sent a link by a family member, open that link to view the tree.</p>
-    <p><small>Development plan: see <code>docs/PLAN.md</code> in the repository.</small></p>
-  </main>
+  <header class="app-header"></header>
+  <nav class="sidenav" aria-label="Main"></nav>
+
+  <main class="app-main"></main>
+
+  <nav class="tabbar" aria-label="Main"></nav>
+
+  <script src="assets/js/config/app-config.js"></script>
+  <script src="assets/js/utils/brief-message.js"></script>
+  <script src="assets/js/utils/api.js"></script>
+  <script src="assets/js/utils/tree-access.js"></script>
+  <script src="assets/js/utils/formatters.js"></script>
+  <script src="assets/js/components/shell.js"></script>
+  <script src="assets/js/pages/home.js"></script>
+  <script src="assets/js/main.js"></script>
 </body>
 </html>

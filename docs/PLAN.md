@@ -1,6 +1,6 @@
 # FamilyTree – development plan
 
-_Last updated: 2026-10-18_
+_Last updated: 2026-10-18 (Phase 0 implemented)_
 
 ## 1. Goal
 
@@ -67,17 +67,17 @@ Everything in bold below is in scope for this project; the rest is listed as fut
 
 Each phase ends with: deployed Edge Function, migration applied, site live on Pages, smoke test done, docs updated.
 
-### Phase 0 – Scaffold (repo, schema, API skeleton) ✅ repo created
+### Phase 0 – Scaffold (repo, schema, API skeleton)
 
 - [x] Repo, README, `.cursorrules`, docs, `.gitignore`, shared-DB rule
-- [ ] Sync `brief-message` from `cursor-sites-shared`; add `docs/UI_BRIEF_MESSAGE.md`
-- [ ] `supabase/config.toml`, migration `familytree_schema` (see DATA_MODEL.md), bucket `familytree`
-- [ ] Edge Function `familytree-api` skeleton: CORS, `{error,data}` envelope, action router, tree-code guard, `lookupTree`, `register`, `connect`, `whoAmI`, `signOut`
-- [ ] `assets/css/style.css` design tokens (CSS variables), responsive shell (header, bottom nav on phone, side nav on desktop), `components/header.html`, `footer.html`
-- [ ] `app-config.js`, `api.js`, `tree-access.js` (share-code capture from `?t=` into localStorage; session token for edits)
-- [ ] `index.html` landing: with share code → tree home; without → "ask for the link". Header: Connect / Register / signed-in chip
-- [ ] Create the first tree row (our family) with share + admin codes; seed the first admin contributor (or register via a bootstrap invite)
-- [ ] GitHub Pages enabled and verified
+- [x] Sync `brief-message` from `cursor-sites-shared`; add `docs/UI_BRIEF_MESSAGE.md`
+- [x] `supabase/config.toml`, migration `familytree_schema` (see DATA_MODEL.md), bucket `familytree`
+- [x] Edge Function `familytree-api` skeleton: CORS, `{error,data}` envelope, action router, tree-code guard, `lookupTree`, `register`, `connect`, `whoAmI`, `signOut`
+- [x] `assets/css/style.css` design tokens (CSS variables), responsive shell (header, bottom nav on phone, side nav on desktop), `components/header.html`, `footer.html`
+- [x] `app-config.js`, `api.js`, `tree-access.js` (share-code capture from `?t=` into localStorage; session token for edits)
+- [x] `index.html` landing: with share code → tree home; without → "ask for the link". Header: Connect / Register / signed-in chip
+- [x] Create the first tree row (our family) with share + admin codes; seed the first admin contributor (or register via a bootstrap invite)
+- [x] GitHub Pages enabled and verified
 
 ### Phase 1 – People & relationships (MVP)
 
