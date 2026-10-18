@@ -45,6 +45,7 @@ Living-person detail is only returned when `treeCode` is valid (which is every n
 | `addParentToPerson` | POST | `{ childId, parent: { existingId } \| { new: PersonInput }, sex? }` → creates/extends parent family |
 | `createEvent` | POST | `{ personId \| familyId, type, dateText?, placeText?, description? }` |
 | `updateEvent` / `deleteEvent` | POST | |
+| `createNote` | POST | `{ targetType, targetId, kind?, body }` |
 | `getPedigree` | GET | `{ focusId, generations }` → `{ persons: PersonSummary[], families: FamilyLink[] }` |
 | `recentChanges` | GET | `{ limit? }` → `{ changes: ChangeLogRow[] }` |
 | `stats` | GET | → `{ persons, living, families, media, surnames: [{surname,count}] }` |

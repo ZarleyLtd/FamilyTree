@@ -307,6 +307,229 @@ window.FamilyTreeUI = (function () {
     document.body.style.overflow = '';
   }
 
+  function avatar(p, size) {
+    var cls = 'avatar avatar--' + ((p && p.sex) || 'U') + (size ? ' avatar--' + size : '');
+    return '<span class="' + cls + '" aria-hidden="true">' + esc(F.initialsOf(p)) + '</span>';
+  }
+
+  function personRow(p, opts) {
+    opts = opts || {};
+    var meta = opts.meta != null ? opts.meta : F.lifespan(p) + (p.birthPlaceShort ? ' \u00b7 ' + p.birthPlaceShort : '');
+    return (
+      '<a class="person-row" href="person.html?id=' +
+      esc(p.id) +
+      '">' +
+      avatar(p) +
+      '<span class="person-row__body"><span class="person-row__name">' +
+      esc(F.fullName(p)) +
+      '</span><span class="person-row__meta">' +
+      esc(meta) +
+      '</span></span>' +
+      (opts.tag ? '<span class="person-row__tag">' + esc(opts.tag) + '</span>' : '') +
+      '<span class="person-row__chev">\u203A</span></a>'
+    );
+  }
+
+  function bindSeg(root, onChange) {
+    $$('button', root).forEach(function (b) {
+      b.addEventListener('click', function () {
+        $$('button', root).forEach(function (x) {
+          x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
+        });
+        if (onChange) onChange(b.dataset.value);
+      });
+    });
+  }
+  function segValue(root) {
+    var b = $('button[aria-pressed="true"]', root);
+    return b ? b.dataset.value : null;
+  }
+
+  function personPayloadFromForm(root, extra) {
+    var sw = $('#fLiving', root);
+    var living = sw ? sw.getAttribute('aria-checked') === 'true' : true;
+    var birthText = $('#fBirth', root) ? $('#fBirth', root).value.trim() : '';
+    var birthPlace = $('#fBirthPlace', root) ? $('#fBirthPlace', root).value.trim() : '';
+    var deathText = $('#fDeath', root) ? $('#fDeath', root).value.trim() : '';
+    var deathPlace = $('#fDeathPlace', root) ? $('#fDeathPlace', root).value.trim() : '';
+    var payload = {
+      person: {
+        givenNames: $('#fGiven', root).value.trim(),
+        surname: $('#fSurname', root).value.trim(),
+        birthSurname: $('#fBirthSurname', root) ? $('#fBirthSurname', root).value.trim() : '',
+        nickname: $('#fNick', root) ? $('#fNick', root).value.trim() : '',
+        sex: segValue($('#fSex', root)),
+        living: living
+      },
+      birth: birthText || birthPlace ? { dateText: birthText, placeText: birthPlace } : null,
+      death: !living && (deathText || deathPlace) ? { dateText: deathText, placeText: deathPlace } : null
+    };
+    if (extra) Object.keys(extra).forEach(function (k) {
+      payload[k] = extra[k];
+    });
+    return payload;
+  }
+
+  function openPersonForm(cfg) {
+    if (!requireContributor()) return;
+    cfg = cfg || {};
+    var v = cfg.values || {};
+    var sex = v.sex || cfg.defaultSex || 'U';
+    var living = v.living != null ? v.living : true;
+    var body =
+      (cfg.intro ? '<p class="muted small">' + esc(cfg.intro) + '</p>' : '') +
+      '<div class="field-row">' +
+      '<div class="field"><label>Given names</label><input type="text" id="fGiven" autocomplete="off" placeholder="e.g. Mary Josephine" value="' +
+      esc(v.given || v.givenNames || '') +
+      '" /></div>' +
+      '<div class="field"><label>Surname</label><input type="text" id="fSurname" autocomplete="off" value="' +
+      esc(v.surname || cfg.defaultSurname || '') +
+      '" /></div></div>' +
+      '<div class="field-row">' +
+      '<div class="field"><label>Birth surname</label><input type="text" id="fBirthSurname" value="' +
+      esc(v.birthSurname || '') +
+      '" /></div>' +
+      '<div class="field"><label>Nickname</label><input type="text" id="fNick" value="' +
+      esc(v.nickname || '') +
+      '" /></div></div>' +
+      '<div class="field"><label>Sex</label><div class="seg seg--block" id="fSex">' +
+      '<button type="button" data-value="M" aria-pressed="' +
+      (sex === 'M') +
+      '">Male</button>' +
+      '<button type="button" data-value="F" aria-pressed="' +
+      (sex === 'F') +
+      '">Female</button>' +
+      '<button type="button" data-value="U" aria-pressed="' +
+      (sex === 'U') +
+      '">Unknown</button></div></div>' +
+      '<div class="field-row">' +
+      '<div class="field"><label>Birth date</label><input type="text" id="fBirth" placeholder="e.g. abt 1842, Q2 1864" value="' +
+      esc(v.birth || v.birthDateText || '') +
+      '" /><span class="hint">Approximate is fine: abt, bef, aft, 1850–1855</span></div>' +
+      '<div class="field"><label>Birth place</label><input type="text" id="fBirthPlace" placeholder="Townland, county" value="' +
+      esc(v.birthPlace || v.birthPlaceShort || '') +
+      '" /></div></div>' +
+      '<div class="toggle"><div><strong>Living</strong><div class="hint muted small">Living people are only shown to family with the link</div></div>' +
+      '<button type="button" class="switch" id="fLiving" role="switch" aria-checked="' +
+      living +
+      '"></button></div>' +
+      '<div id="deathFields" class="' +
+      (living ? 'hidden' : '') +
+      '"><div class="field-row">' +
+      '<div class="field"><label>Death date</label><input type="text" id="fDeath" placeholder="e.g. 14 Mar 1931" value="' +
+      esc(v.death || v.deathDateText || '') +
+      '" /></div>' +
+      '<div class="field"><label>Death place</label><input type="text" id="fDeathPlace" value="' +
+      esc(v.deathPlace || v.deathPlaceShort || '') +
+      '" /></div></div></div>' +
+      (cfg.extraHtml || '');
+    openSheet(
+      cfg.title || 'Add a person',
+      body,
+      '<button class="btn" type="button" data-close>Cancel</button><button class="btn btn--primary" type="button" id="fSave">' +
+        esc(cfg.saveLabel || 'Save') +
+        '</button>',
+      function (root) {
+        $$('.seg', root).forEach(function (seg) {
+          bindSeg(seg);
+        });
+        var sw = $('#fLiving', root);
+        sw.addEventListener('click', function () {
+          var on = sw.getAttribute('aria-checked') !== 'true';
+          sw.setAttribute('aria-checked', String(on));
+          $('#deathFields', root).classList.toggle('hidden', on);
+        });
+        setTimeout(function () {
+          $('#fGiven', root).focus();
+        }, 50);
+        $('#fSave', root).onclick = function () {
+          var given = $('#fGiven', root).value.trim();
+          if (!given) {
+            brief('Given name is needed', $('#fGiven', root));
+            return;
+          }
+          var payload = personPayloadFromForm(root);
+          if (cfg.collectExtra) cfg.collectExtra(root, payload);
+          closeSheet();
+          cfg.onSave(payload);
+        };
+      }
+    );
+  }
+
+  function openPersonPicker(title, onPick, excludeId) {
+    openSheet(
+      title,
+      '<div class="search"><span class="ico">\uD83D\uDD0D</span><input type="search" id="pkQ" placeholder="Search by name or year" autocomplete="off" /></div><div id="pkList" style="margin-top:.6rem"></div>',
+      null,
+      function (root) {
+        var list = $('#pkList', root);
+        function render(q) {
+          API.listPersons({ q: q, limit: 40 })
+            .then(function (data) {
+              var res = ((data && data.persons) || []).filter(function (p) {
+                return p.id !== excludeId;
+              });
+              list.innerHTML = res.length
+                ? res
+                    .map(function (p) {
+                      return personRow(p).replace(
+                        'href="person.html?id=' + p.id + '"',
+                        'href="#" data-pick="' + p.id + '"'
+                      );
+                    })
+                    .join('')
+                : '<p class="empty">No one matches.</p>';
+            })
+            .catch(function (e) {
+              list.innerHTML = '<p class="empty">' + esc(e.message) + '</p>';
+            });
+        }
+        render('');
+        $('#pkQ', root).addEventListener('input', function (e) {
+          render(e.target.value);
+        });
+        list.addEventListener('click', function (e) {
+          var a = e.target.closest('[data-pick]');
+          if (!a) return;
+          e.preventDefault();
+          var id = a.getAttribute('data-pick');
+          closeSheet();
+          API.getPerson(id)
+            .then(function (data) {
+              onPick(data.person);
+            })
+            .catch(function () {
+              onPick({ id: id });
+            });
+        });
+        setTimeout(function () {
+          $('#pkQ', root).focus();
+        }, 50);
+      }
+    );
+  }
+
+  function chooseNewOrExisting(title, onNew, onExisting) {
+    openSheet(
+      title,
+      '<div class="btn-row" style="flex-direction:column;align-items:stretch">' +
+        '<button class="btn btn--primary" type="button" id="chNew">\u2795 Create a new person</button>' +
+        '<button class="btn" type="button" id="chExisting">\uD83D\uDD0E Choose someone already in the tree</button></div>',
+      null,
+      function (root) {
+        $('#chNew', root).onclick = function () {
+          closeSheet();
+          onNew();
+        };
+        $('#chExisting', root).onclick = function () {
+          closeSheet();
+          onExisting();
+        };
+      }
+    );
+  }
+
   function comingSoon(title, blurb) {
     var main = $('.app-main');
     if (!main) return;
@@ -347,6 +570,16 @@ window.FamilyTreeUI = (function () {
     openSheet: openSheet,
     closeSheet: closeSheet,
     comingSoon: comingSoon,
-    refreshMe: refreshMe
+    refreshMe: refreshMe,
+    avatar: avatar,
+    personRow: personRow,
+    bindSeg: bindSeg,
+    segValue: segValue,
+    openPersonForm: openPersonForm,
+    openPersonPicker: openPersonPicker,
+    chooseNewOrExisting: chooseNewOrExisting,
+    confirm: function (title, message, label, onYes) {
+      if (window.ConfirmDialog) ConfirmDialog.show(title, message, label, onYes);
+    }
   };
 })();

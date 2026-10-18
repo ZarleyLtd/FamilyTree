@@ -11,6 +11,7 @@
  */
 import { Client } from "https://deno.land/x/postgres@v0.19.3/mod.ts";
 import bcrypt from "https://esm.sh/bcryptjs@2.4.3";
+import * as G from "./genealogy.ts";
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const SESSION_DAYS = 90;
@@ -24,10 +25,13 @@ const corsHeaders = {
 };
 
 function responseJson(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+  return new Response(
+    JSON.stringify(body, (_k, v) => (typeof v === "bigint" ? Number(v) : v)),
+    {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    },
+  );
 }
 
 function ok(data: unknown, status = 200) {
@@ -36,6 +40,12 @@ function ok(data: unknown, status = 200) {
 
 function fail(error: string, status = 400, data: unknown = null) {
   return responseJson({ error, data }, status);
+}
+
+function asNum(v: unknown) {
+  if (typeof v === "bigint") return Number(v);
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
 }
 
 function errMsg(e: unknown): string {
@@ -243,7 +253,7 @@ function validatePassword(password: string) {
 
 async function statusAction(pg: Client) {
   const r = await pg.queryObject<{ n: number }>`SELECT count(*)::int AS n FROM familytree.trees`;
-  return ok({ hasTrees: (r.rows[0]?.n || 0) > 0 });
+  return ok({ hasTrees: asNum(r.rows[0]?.n) > 0 });
 }
 
 async function lookupTree(pg: Client, body: Record<string, unknown>) {
@@ -258,7 +268,7 @@ async function lookupTree(pg: Client, body: Record<string, unknown>) {
     id: tree.id,
     name: tree.name,
     slug: tree.slug,
-    personCount: c.rows[0]?.n || 0,
+    personCount: asNum(c.rows[0]?.n),
     settings: { homePersonId: settings.homePersonId ?? null },
   });
 }
@@ -275,7 +285,7 @@ async function bootstrapTree(pg: Client, req: Request, body: Record<string, unkn
     const existing = await pg.queryObject<{ n: number }>`
       SELECT count(*)::int AS n FROM familytree.trees
     `;
-    if ((existing.rows[0]?.n || 0) > 0) {
+    if (asNum(existing.rows[0]?.n) > 0) {
       await pg.queryArray`ROLLBACK`;
       return fail("A tree already exists", 403);
     }
@@ -373,7 +383,7 @@ async function register(pg: Client, req: Request, body: Record<string, unknown>)
       SELECT count(*)::int AS n FROM familytree.contributors
       WHERE tree_id = ${tree.id}::uuid
     `;
-    const role = (count.rows[0]?.n || 0) === 0 ? "admin" : "contributor";
+    const role = asNum(count.rows[0]?.n) === 0 ? "admin" : "contributor";
     const created = await pg.queryObject<Record<string, unknown>>`
       INSERT INTO familytree.contributors
         (tree_id, handle, display_name, password_hash, role, invite_id)
@@ -592,11 +602,11 @@ async function stats(pg: Client, body: Record<string, unknown>) {
     ORDER BY count DESC, surname
   `;
   return ok({
-    persons: persons.rows[0]?.n || 0,
-    living: persons.rows[0]?.living || 0,
-    families: fam.rows[0]?.n || 0,
-    media: media.rows[0]?.n || 0,
-    surnames: surnames.rows,
+    persons: asNum(persons.rows[0]?.n),
+    living: asNum(persons.rows[0]?.living),
+    families: asNum(fam.rows[0]?.n),
+    media: asNum(media.rows[0]?.n),
+    surnames: surnames.rows.map((s) => ({ surname: s.surname, count: asNum(s.count) })),
   });
 }
 
@@ -611,7 +621,7 @@ async function recentChanges(pg: Client, body: Record<string, unknown>) {
     LIMIT ${limit}
   `;
   const changes = r.rows.map((c) => ({
-    id: c.id,
+    id: String(c.id),
     actorId: c.actor_id,
     actorName: c.actor_name,
     action: c.action,
@@ -626,6 +636,32 @@ async function recentChanges(pg: Client, body: Record<string, unknown>) {
 function statusOf(e: unknown) {
   const s = (e as { status?: number }).status;
   return typeof s === "number" ? s : 500;
+}
+
+type Auth = { session: Record<string, unknown>; contributor: Record<string, unknown> };
+
+async function asRead(
+  pg: Client,
+  body: Record<string, unknown>,
+  fn: (pg: Client, tree: Record<string, unknown>, body: Record<string, unknown>) => Promise<unknown>,
+) {
+  const tree = await requireTree(pg, body.treeCode);
+  return ok(await fn(pg, tree, body));
+}
+
+async function asMut(
+  pg: Client,
+  body: Record<string, unknown>,
+  fn: (
+    pg: Client,
+    tree: Record<string, unknown>,
+    auth: Auth,
+    body: Record<string, unknown>,
+  ) => Promise<unknown>,
+) {
+  const tree = await requireTree(pg, body.treeCode);
+  const auth = await requireSession(pg, body.sessionToken, String(tree.id));
+  return ok(await fn(pg, tree, auth, body));
 }
 
 async function handle(req: Request) {
@@ -675,13 +711,47 @@ async function handle(req: Request) {
         return await stats(pg, body);
       case "recentChanges":
         return await recentChanges(pg, body);
+      case "listPersons":
+        return await asRead(pg, body, G.listPersons);
+      case "getPerson":
+        return await asRead(pg, body, G.getPerson);
+      case "getPedigree":
+        return await asRead(pg, body, G.getPedigree);
+      case "createPerson":
+        return await asMut(pg, body, G.createPerson);
+      case "updatePerson":
+        return await asMut(pg, body, G.updatePerson);
+      case "deletePerson":
+        return await asMut(pg, body, G.deletePerson);
+      case "createFamily":
+        return await asMut(pg, body, G.createFamily);
+      case "updateFamily":
+        return await asMut(pg, body, G.updateFamily);
+      case "addChild":
+        return await asMut(pg, body, G.addChild);
+      case "removeChild":
+        return await asMut(pg, body, G.removeChild);
+      case "reorderChildren":
+        return await asMut(pg, body, G.reorderChildren);
+      case "addParentToPerson":
+        return await asMut(pg, body, G.addParentToPerson);
+      case "createEvent":
+        return await asMut(pg, body, G.createEvent);
+      case "updateEvent":
+        return await asMut(pg, body, G.updateEvent);
+      case "deleteEvent":
+        return await asMut(pg, body, G.deleteEvent);
+      case "createNote":
+        return await asMut(pg, body, G.createNote);
+      case "setSelfPerson":
+        return await asMut(pg, body, G.setSelfPerson);
       default:
         return fail("Unknown action: " + action);
     }
   } catch (e) {
     const msg = errMsg(e);
     const status = statusOf(e);
-    if (status === 403 || status === 404) return fail(msg, status);
+    if (status === 400 || status === 403 || status === 404) return fail(msg, status);
     return fail(msg, 500);
   } finally {
     if (pg) {

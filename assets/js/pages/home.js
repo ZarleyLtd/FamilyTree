@@ -158,8 +158,14 @@ window.FamilyTreeHome = (function () {
       changes && changes.length
         ? changes
             .map(function (c) {
+                var href =
+                c.targetType === 'persons' && c.targetId
+                  ? 'person.html?id=' + c.targetId
+                  : 'people.html';
               return (
-                '<div class="change"><span class="change__who">' +
+                '<a class="change" href="' +
+                href +
+                '" style="color:inherit;text-decoration:none"><span class="change__who">' +
                 U.esc((c.actorName || '?')[0]) +
                 '</span><span class="change__body">' +
                 U.esc(c.summary || c.action) +
@@ -167,7 +173,7 @@ window.FamilyTreeHome = (function () {
                 U.esc(c.actorName || '') +
                 ' \u00b7 ' +
                 U.esc(F.relativeTime(c.createdAt)) +
-                '</div></span></div>'
+                '</div></span></a>'
               );
             })
             .join('')
@@ -178,7 +184,9 @@ window.FamilyTreeHome = (function () {
             .slice(0, 8)
             .map(function (s) {
               return (
-                '<a class="chip" href="people.html" style="text-decoration:none">' +
+                '<a class="chip" href="people.html?surname=' +
+                encodeURIComponent(s.surname) +
+                '" style="text-decoration:none">' +
                 U.esc(s.surname) +
                 ' <span class="muted">' +
                 s.count +
@@ -189,8 +197,8 @@ window.FamilyTreeHome = (function () {
         : '<p class="empty">No surnames yet.</p>';
     main.innerHTML =
       '<div class="search-wrap">' +
-      '<div class="search"><span class="ico">\uD83D\uDD0D</span><input type="search" id="homeSearch" placeholder="Search people (coming in Phase 1)" autocomplete="off" /></div>' +
-      '</div>' +
+      '<div class="search"><span class="ico">\uD83D\uDD0D</span><input type="search" id="homeSearch" placeholder="Search people, e.g. a surname or year" autocomplete="off" /></div>' +
+      '<div class="search-results hidden" id="homeResults"></div></div>' +
       '<section class="card" id="meCard">' +
       hero +
       '</section>' +
@@ -211,17 +219,32 @@ window.FamilyTreeHome = (function () {
       '</div>' +
       '<button class="fab" id="fabAdd" aria-label="Add person" title="Add person">+</button>';
 
-    function later(anchor) {
-      if (!U.requireContributor()) return;
-      U.brief('Adding people comes in the next phase', anchor);
+    function addPerson(prefill) {
+      var parts = (prefill || '').split(/\s+/).filter(Boolean);
+      U.openPersonForm({
+        title: 'Add a person',
+        intro: 'Not connected to anyone yet – you can add parents, partners and children from their profile.',
+        values: prefill
+          ? { given: parts.slice(0, -1).join(' ') || parts[0], surname: parts.length > 1 ? parts[parts.length - 1] : '' }
+          : null,
+        onSave: function (payload) {
+          API.createPerson(payload)
+            .then(function (data) {
+              location.href = 'person.html?id=' + data.person.id + '&new=1';
+            })
+            .catch(function (e) {
+              U.brief(e.message || 'Could not save');
+            });
+        }
+      });
     }
     var fab = $('#fabAdd');
-    if (fab) fab.addEventListener('click', function () { later(fab); });
+    if (fab) fab.addEventListener('click', function () { addPerson(''); });
     var qAdd = $('#qAdd');
     if (qAdd) {
       qAdd.addEventListener('click', function (e) {
         e.preventDefault();
-        later(qAdd);
+        addPerson('');
       });
     }
     var qConnect = $('#qConnect');
@@ -231,8 +254,32 @@ window.FamilyTreeHome = (function () {
         U.openConnectSheet();
       });
     }
-    $('#homeSearch').addEventListener('focus', function () {
-      U.brief('People search arrives in Phase 1', this);
+    var inp = $('#homeSearch');
+    var res = $('#homeResults');
+    var searchTimer = null;
+    inp.addEventListener('input', function () {
+      var q = inp.value.trim();
+      clearTimeout(searchTimer);
+      if (!q) {
+        res.classList.add('hidden');
+        return;
+      }
+      searchTimer = setTimeout(function () {
+        API.listPersons({ q: q, limit: 8 }).then(function (data) {
+          var list = (data && data.persons) || [];
+          res.innerHTML = list.length
+            ? list.map(function (p) { return U.personRow(p); }).join('')
+            : '<p class="empty">No match. <a href="#" id="addFromSearch">Add “' + U.esc(q) + '” as a new person</a></p>';
+          res.classList.remove('hidden');
+        });
+      }, 180);
+    });
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('.search-wrap')) res.classList.add('hidden');
+      if (e.target.id === 'addFromSearch') {
+        e.preventDefault();
+        addPerson(inp.value.trim());
+      }
     });
   }
 

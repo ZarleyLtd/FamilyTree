@@ -1,6 +1,6 @@
 # FamilyTree – development plan
 
-_Last updated: 2026-10-18 (Phase 0 implemented)_
+_Last updated: 2026-10-19 (Phase 1 implemented)_
 
 ## 1. Goal
 
@@ -81,16 +81,16 @@ Each phase ends with: deployed Edge Function, migration applied, site live on Pa
 
 ### Phase 1 – People & relationships (MVP)
 
-- [ ] **Add person**: given names, surname, birth surname, nickname, sex, living flag (auto: no death and born < 110 years ago → living), optional birth/death date+place (written as events), notes
-- [ ] **Person profile** `person.html?id=`: name header + photo, facts, parents, siblings, partners & children, events timeline, notes, "edit" when contributor
-- [ ] **Relationships**: add parent / add child / add partner / add sibling from a profile via a person picker (search existing or create new inline); child relation type (birth/adopted/step/foster)
-- [ ] **Families**: union record with type (married/partners/unknown), marriage event, children ordering
-- [ ] **People list** `people.html`: search as you type (name, year), filters (surname, living/deceased, has photo, missing data), sort, alphabet index on desktop, compact cards on phone
-- [ ] **Fuzzy dates**: `GenDate.parse("abt 1842" | "bef 1900" | "1850–1855" | "12 Mar 1901" | "Mar 1901" | "1901")` → `{ text, sort, qualifier, end }`, `GenDate.format()`
-- [ ] **Change log**: written server-side for every mutation; "Recent changes" on home
-- [ ] **Edit & soft-delete** persons/families/events with confirm dialog; undo via admin revert (Phase 4 UI)
-- [ ] **Pedigree chart v1** `tree.html?id=&view=pedigree`: 4 generations, SVG, tap a card to recentre, tap name to open profile; vertical layout on phone, horizontal on desktop
-- [ ] Mobile/desktop QA pass at 360px and 1280px
+- [x] **Add person**: given names, surname, birth surname, nickname, sex, living flag (auto: no death and born < 110 years ago → living), optional birth/death date+place (written as events), notes
+- [x] **Person profile** `person.html?id=`: name header + photo, facts, parents, siblings, partners & children, events timeline, notes, "edit" when contributor
+- [x] **Relationships**: add parent / add child / add partner / add sibling from a profile via a person picker (search existing or create new inline); child relation type (birth/adopted/step/foster)
+- [x] **Families**: union record with type (married/partners/unknown), marriage event, children ordering
+- [x] **People list** `people.html`: search as you type (name, year), filters (surname, living/deceased, has photo, missing data), sort, alphabet index on desktop, compact cards on phone
+- [x] **Fuzzy dates**: `GenDate.parse("abt 1842" | "bef 1900" | "1850–1855" | "12 Mar 1901" | "Mar 1901" | "1901")` → `{ text, sort, qualifier, end }`, `GenDate.format()`
+- [x] **Change log**: written server-side for every mutation; "Recent changes" on home
+- [x] **Edit & soft-delete** persons/families/events with confirm dialog; undo via admin revert (Phase 4 UI)
+- [x] **Pedigree chart v1** `tree.html?id=&view=pedigree`: 4 generations, SVG, tap a card to recentre, tap name to open profile; vertical layout on phone, horizontal on desktop
+- [x] Mobile/desktop QA pass at 360px and 1280px
 
 ### Phase 2 – Photos and artifacts
 

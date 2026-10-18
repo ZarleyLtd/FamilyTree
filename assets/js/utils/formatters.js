@@ -38,9 +38,64 @@
     return new Date(iso).toLocaleDateString();
   }
 
+  function fullName(p) {
+    if (!p) return '';
+    var given = p.givenNames || p.given || '';
+    var nick = p.nickname ? ' “' + p.nickname + '”' : '';
+    var sur = p.surname || '';
+    var suf = p.suffix ? ' ' + p.suffix : '';
+    return (given + nick + ' ' + sur + suf).trim();
+  }
+
+  function shortName(p) {
+    if (!p) return '';
+    var given = (p.givenNames || p.given || '').split(/\s+/)[0] || '';
+    return (given + ' ' + (p.surname || '')).trim();
+  }
+
+  function initialsOf(p) {
+    if (!p) return '?';
+    var g = (p.givenNames || p.given || '?')[0];
+    var s = (p.surname || ' ')[0];
+    return (g + s).toUpperCase();
+  }
+
+  function lifespan(p) {
+    if (!p) return '';
+    var b = p.birthYear;
+    var d = p.deathYear;
+    if (p.living) return b ? 'b. ' + b : 'Living';
+    return (b || '?') + ' \u2013 ' + (d || '?');
+  }
+
+  function lifeLine(p) {
+    if (!p) return '';
+    var parts = [];
+    if (p.birthDateText) parts.push('Born ' + p.birthDateText + (p.birthPlaceShort ? ', ' + p.birthPlaceShort : ''));
+    if (p.deathDateText) parts.push('Died ' + p.deathDateText + (p.deathPlaceShort ? ', ' + p.deathPlaceShort : ''));
+    else if (p.living && p.birthYear) parts.push('Living');
+    return parts.join(' \u00b7 ');
+  }
+
+  function eventLabel(type) {
+    var map = {
+      birth: 'Born', baptism: 'Baptised', marriage: 'Married', divorce: 'Divorced',
+      death: 'Died', burial: 'Buried', census: 'Census', residence: 'Residence',
+      occupation: 'Occupation', education: 'Education', emigration: 'Emigrated',
+      immigration: 'Immigrated', military: 'Military service', retirement: 'Retired', custom: 'Event'
+    };
+    return map[type] || type;
+  }
+
   global.Formatters = {
     esc: esc,
     initialsFromName: initialsFromName,
-    relativeTime: relativeTime
+    initialsOf: initialsOf,
+    relativeTime: relativeTime,
+    fullName: fullName,
+    shortName: shortName,
+    lifespan: lifespan,
+    lifeLine: lifeLine,
+    eventLabel: eventLabel
   };
 })(typeof window !== 'undefined' ? window : this);

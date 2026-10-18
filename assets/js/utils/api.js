@@ -48,13 +48,17 @@
     }).then(parseJsonResponse);
   }
 
-  function withAccess(extra) {
+  function withTree(extra) {
     var A = global.TreeAccess;
     var out = Object.assign({}, extra || {});
-    if (A) {
-      if (A.getShareCode()) out.treeCode = A.getShareCode();
-      if (A.getSessionToken()) out.sessionToken = A.getSessionToken();
-    }
+    if (A && A.getShareCode()) out.treeCode = A.getShareCode();
+    return out;
+  }
+
+  function withAccess(extra) {
+    var A = global.TreeAccess;
+    var out = withTree(extra);
+    if (A && A.getSessionToken()) out.sessionToken = A.getSessionToken();
     return out;
   }
 
@@ -93,10 +97,52 @@
       return post('listInvites', withAccess({}));
     },
     stats: function () {
-      return get('stats', withAccess({}));
+      return get('stats', withTree({}));
     },
     recentChanges: function (limit) {
-      return get('recentChanges', withAccess({ limit: limit }));
+      return get('recentChanges', withTree({ limit: limit }));
+    },
+    listPersons: function (params) {
+      return get('listPersons', withTree(params || {}));
+    },
+    getPerson: function (id) {
+      return get('getPerson', withTree({ id: id }));
+    },
+    getPedigree: function (focusId, generations) {
+      return get('getPedigree', withTree({ focusId: focusId, generations: generations }));
+    },
+    createPerson: function (body) {
+      return post('createPerson', withAccess(body));
+    },
+    updatePerson: function (body) {
+      return post('updatePerson', withAccess(body));
+    },
+    deletePerson: function (id) {
+      return post('deletePerson', withAccess({ id: id }));
+    },
+    createFamily: function (body) {
+      return post('createFamily', withAccess(body));
+    },
+    addChild: function (body) {
+      return post('addChild', withAccess(body));
+    },
+    addParentToPerson: function (body) {
+      return post('addParentToPerson', withAccess(body));
+    },
+    createEvent: function (body) {
+      return post('createEvent', withAccess(body));
+    },
+    updateEvent: function (body) {
+      return post('updateEvent', withAccess(body));
+    },
+    deleteEvent: function (id) {
+      return post('deleteEvent', withAccess({ id: id }));
+    },
+    createNote: function (body) {
+      return post('createNote', withAccess(body));
+    },
+    setSelfPerson: function (personId) {
+      return post('setSelfPerson', withAccess({ personId: personId }));
     }
   };
 })(typeof window !== 'undefined' ? window : this);
