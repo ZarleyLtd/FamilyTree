@@ -465,6 +465,7 @@ export async function getPerson(
     const b = await loadFamilyBundle(pg, tree, String(s.id), personMap);
     if (b) families.push(b);
   }
+  const siblings = await loadSiblingsForPerson(pg, id, personMap, limit);
   const notes = await pg.queryObject<Record<string, unknown>>`
     SELECT * FROM familytree.notes
     WHERE tree_id = ${tree.id}::uuid AND target_type = 'person' AND target_id = ${id}::uuid
@@ -488,8 +489,9 @@ export async function getPerson(
       privacy: person.privacy || "normal",
     },
     events: eventOut,
-    parents,
-    families,
+    parents: coalesceFamilyBundles(parents),
+    families: coalesceFamilyBundles(families),
+    siblings,
     notes: notes.rows.map((n) => ({
       id: n.id,
       kind: n.kind,
@@ -732,6 +734,205 @@ export async function deletePerson(
   return { ok: true };
 }
 
+function relRank(rel: string) {
+  if (rel === "married") return 2;
+  if (rel === "partners") return 1;
+  return 0;
+}
+
+async function findCoupleFamily(
+  pg: Client,
+  treeId: string,
+  a: string,
+  b: string,
+) {
+  if (!a || !b) return null;
+  const r = await pg.queryObject<Record<string, unknown>>`
+    SELECT * FROM familytree.families
+    WHERE tree_id = ${treeId}::uuid
+      AND deleted_at IS NULL
+      AND partner1_id IS NOT NULL
+      AND partner2_id IS NOT NULL
+      AND (
+        (partner1_id = ${a}::uuid AND partner2_id = ${b}::uuid)
+        OR (partner1_id = ${b}::uuid AND partner2_id = ${a}::uuid)
+      )
+    LIMIT 1
+  `;
+  return r.rows[0] || null;
+}
+
+async function insertFamilyRow(
+  pg: Client,
+  tree: Record<string, unknown>,
+  actor: string,
+  p1: string | null,
+  p2: string | null,
+  rel: string,
+) {
+  const ins = await pg.queryObject<Record<string, unknown>>`
+    INSERT INTO familytree.families (tree_id, partner1_id, partner2_id, relationship_type, created_by, updated_by)
+    VALUES (${tree.id}::uuid, ${p1}::uuid, ${p2}::uuid, ${rel}, ${actor}, ${actor})
+    RETURNING *
+  `;
+  return ins.rows[0];
+}
+
+async function ensureCoupleFamily(
+  pg: Client,
+  tree: Record<string, unknown>,
+  actor: string,
+  p1: string | null,
+  p2: string | null,
+  rel: string,
+) {
+  if (p1 && p2) {
+    const existing = await findCoupleFamily(pg, String(tree.id), p1, p2);
+    if (existing) {
+      if (relRank(rel) > relRank(String(existing.relationship_type || "unknown"))) {
+        await pg.queryArray`
+          UPDATE familytree.families
+          SET relationship_type = ${rel}, updated_by = ${actor}
+          WHERE id = ${existing.id}::uuid
+        `;
+        existing.relationship_type = rel;
+      }
+      return existing;
+    }
+  }
+  return await insertFamilyRow(pg, tree, actor, p1, p2, rel);
+}
+
+async function softDeleteFamilyIfNoChildren(
+  pg: Client,
+  familyId: string,
+  actor: string,
+) {
+  const n = await pg.queryObject<{ n: number }>`
+    SELECT count(*)::int AS n FROM familytree.family_children WHERE family_id = ${familyId}::uuid
+  `;
+  if (Number(n.rows[0]?.n || 0) > 0) return;
+  await pg.queryArray`
+    UPDATE familytree.families
+    SET deleted_at = now(), updated_by = ${actor}
+    WHERE id = ${familyId}::uuid AND deleted_at IS NULL
+  `;
+}
+
+function parentSlotsFromPartners(
+  personMap: Map<string, Record<string, unknown>>,
+  rows: Array<{ partner1_id?: unknown; partner2_id?: unknown }>,
+) {
+  const cur: { fatherId: string | null; motherId: string | null } = { fatherId: null, motherId: null };
+  rows.forEach((row) => {
+    [row.partner1_id, row.partner2_id].forEach((raw) => {
+      if (!raw) return;
+      const x = personMap.get(String(raw));
+      if (!x) return;
+      if (x.sex === "F" && !cur.motherId) cur.motherId = String(x.id);
+      else if (x.sex === "M" && !cur.fatherId) cur.fatherId = String(x.id);
+      else if (!cur.fatherId) cur.fatherId = String(x.id);
+      else if (!cur.motherId) cur.motherId = String(x.id);
+    });
+  });
+  return cur;
+}
+
+function siblingKind(
+  me: { fatherId: string | null; motherId: string | null },
+  other: { fatherId: string | null; motherId: string | null },
+): "full" | "half" | null {
+  const sameFather = !!(me.fatherId && other.fatherId && me.fatherId === other.fatherId);
+  const sameMother = !!(me.motherId && other.motherId && me.motherId === other.motherId);
+  const diffFather = !!(me.fatherId && other.fatherId && me.fatherId !== other.fatherId);
+  const diffMother = !!(me.motherId && other.motherId && me.motherId !== other.motherId);
+  if (!sameFather && !sameMother) return null;
+  if (diffFather || diffMother) return "half";
+  return "full";
+}
+
+function coalesceFamilyBundles(fams: FamilyBundle[]): FamilyBundle[] {
+  const out: FamilyBundle[] = [];
+  const byPair = new Map<string, FamilyBundle>();
+  fams.forEach((f) => {
+    const a = f.partner1 && f.partner1.id ? String(f.partner1.id) : "";
+    const b = f.partner2 && f.partner2.id ? String(f.partner2.id) : "";
+    if (!a || !b) {
+      out.push(f);
+      return;
+    }
+    const key = [a, b].sort().join("|");
+    const prev = byPair.get(key);
+    if (!prev) {
+      byPair.set(key, f);
+      out.push(f);
+      return;
+    }
+    const seen = new Set(prev.children.map((c) => String(c.id)));
+    f.children.forEach((c) => {
+      if (!seen.has(String(c.id))) prev.children.push(c);
+    });
+    if (!prev.marriage && f.marriage) prev.marriage = f.marriage;
+    if (relRank(f.relationshipType) > relRank(prev.relationshipType)) {
+      prev.relationshipType = f.relationshipType;
+    }
+  });
+  return out;
+}
+
+async function loadSiblingsForPerson(
+  pg: Client,
+  childId: string,
+  personMap: Map<string, Record<string, unknown>>,
+  limit: number,
+) {
+  const parentRows = await pg.queryObject<{ partner1_id: unknown; partner2_id: unknown }>`
+    SELECT f.partner1_id, f.partner2_id
+    FROM familytree.family_children fc
+    JOIN familytree.families f ON f.id = fc.family_id
+    WHERE fc.child_id = ${childId}::uuid AND f.deleted_at IS NULL
+  `;
+  const mine = parentSlotsFromPartners(personMap, parentRows.rows);
+  const fatherId = mine.fatherId;
+  const motherId = mine.motherId;
+  if (!fatherId && !motherId) return [];
+  const slotRows = await pg.queryObject<{ child_id: string; partner1_id: unknown; partner2_id: unknown }>`
+    SELECT fc.child_id, f.partner1_id, f.partner2_id
+    FROM familytree.family_children fc
+    JOIN familytree.families f ON f.id = fc.family_id
+    WHERE f.deleted_at IS NULL
+      AND fc.child_id <> ${childId}::uuid
+      AND (
+        (${fatherId}::uuid IS NOT NULL AND (f.partner1_id = ${fatherId}::uuid OR f.partner2_id = ${fatherId}::uuid))
+        OR (${motherId}::uuid IS NOT NULL AND (f.partner1_id = ${motherId}::uuid OR f.partner2_id = ${motherId}::uuid))
+      )
+  `;
+  const byChild = new Map<string, Array<{ partner1_id: unknown; partner2_id: unknown }>>();
+  slotRows.rows.forEach((row) => {
+    const cid = String(row.child_id);
+    const list = byChild.get(cid) || [];
+    list.push(row);
+    byChild.set(cid, list);
+  });
+  const ids = Array.from(byChild.keys());
+  const out: Array<ReturnType<typeof personSummary> & { kind: "full" | "half" }> = [];
+  ids.forEach((cid) => {
+    const row = personMap.get(cid);
+    if (!row) return;
+    const kind = siblingKind(mine, parentSlotsFromPartners(personMap, byChild.get(cid) || []));
+    if (!kind) return;
+    out.push({ ...personSummary(row, limit), kind });
+  });
+  out.sort((a, b) => {
+    if (a.kind !== b.kind) return a.kind === "full" ? -1 : 1;
+    const ay = a.birthYear == null ? 9999 : a.birthYear;
+    const by = b.birthYear == null ? 9999 : b.birthYear;
+    if (ay !== by) return ay - by;
+    return String(a.givenNames).localeCompare(String(b.givenNames));
+  });
+  return out;
+}
+
 export async function createFamily(
   pg: Client,
   tree: Record<string, unknown>,
@@ -744,29 +945,31 @@ export async function createFamily(
   const rel = String(body.relationshipType || "unknown");
   if (!["married", "partners", "unknown"].includes(rel)) throw statusErr("Invalid relationship type", 400);
   if (!p1 && !p2) throw statusErr("A family needs at least one partner", 400);
-  const ins = await pg.queryObject<Record<string, unknown>>`
-    INSERT INTO familytree.families (tree_id, partner1_id, partner2_id, relationship_type, created_by, updated_by)
-    VALUES (${tree.id}::uuid, ${p1}::uuid, ${p2}::uuid, ${rel}, ${actor}, ${actor})
-    RETURNING *
-  `;
-  const fam = ins.rows[0];
+  const existing = p1 && p2 ? await findCoupleFamily(pg, String(tree.id), p1, p2) : null;
+  const fam = await ensureCoupleFamily(pg, tree, actor, p1, p2, rel);
   const marriage = eventInput(body.marriage);
   if (marriage) {
-    await insertEvent(pg, String(tree.id), actor, {
-      familyId: String(fam.id),
-      type: "marriage",
-      dateText: marriage.dateText,
-      placeText: marriage.placeText,
-    });
+    const already = await pg.queryObject<{ n: number }>`
+      SELECT count(*)::int AS n FROM familytree.events
+      WHERE family_id = ${fam.id}::uuid AND type = 'marriage' AND deleted_at IS NULL
+    `;
+    if (!Number(already.rows[0]?.n || 0)) {
+      await insertEvent(pg, String(tree.id), actor, {
+        familyId: String(fam.id),
+        type: "marriage",
+        dateText: marriage.dateText,
+        placeText: marriage.placeText,
+      });
+    }
   }
   await writeLog(pg, {
     treeId: String(tree.id),
     actorId: String(auth.contributor.id),
     actorName: actor,
-    action: "create",
+    action: existing ? "update" : "create",
     targetType: "families",
     targetId: String(fam.id),
-    summary: "Added a family",
+    summary: existing ? "Reused existing family" : "Added a family",
     after: fam,
   });
   return { family: { id: fam.id, partner1Id: fam.partner1_id, partner2Id: fam.partner2_id, relationshipType: fam.relationship_type } };
@@ -810,6 +1013,37 @@ export async function updateFamily(
     after: upd.rows[0],
   });
   return { family: upd.rows[0] };
+}
+
+export async function deleteFamily(
+  pg: Client,
+  tree: Record<string, unknown>,
+  auth: { contributor: Record<string, unknown> },
+  body: Record<string, unknown>,
+) {
+  const id = String(body.id || body.familyId || "");
+  const before = await pg.queryObject<Record<string, unknown>>`
+    SELECT * FROM familytree.families
+    WHERE id = ${id}::uuid AND tree_id = ${tree.id}::uuid AND deleted_at IS NULL LIMIT 1
+  `;
+  if (!before.rows[0]) throw statusErr("Family not found", 404);
+  const actor = String(auth.contributor.display_name);
+  await pg.queryArray`
+    UPDATE familytree.families
+    SET deleted_at = now(), updated_by = ${actor}
+    WHERE id = ${id}::uuid
+  `;
+  await writeLog(pg, {
+    treeId: String(tree.id),
+    actorId: String(auth.contributor.id),
+    actorName: actor,
+    action: "delete",
+    targetType: "families",
+    targetId: id,
+    summary: "Removed a family union",
+    before: before.rows[0],
+  });
+  return { ok: true };
 }
 
 export async function addChild(
@@ -970,7 +1204,27 @@ export async function addParentToPerson(
     if (String(fam.partner1_id) === String(parent.id) || String(fam.partner2_id) === String(parent.id)) {
       return { familyId, parentId: parent.id };
     }
-    if (!fam.partner1_id) {
+    const otherId = fam.partner1_id
+      ? String(fam.partner1_id)
+      : fam.partner2_id
+        ? String(fam.partner2_id)
+        : null;
+    if (otherId) {
+      const couple = await findCoupleFamily(pg, String(tree.id), String(parent.id), otherId);
+      if (couple && String(couple.id) !== familyId) {
+        const rel = "birth";
+        await attachChildToFamily(pg, String(couple.id), childId, rel);
+        await unlinkChildFromFamily(pg, familyId, childId);
+        await softDeleteFamilyIfNoChildren(pg, familyId, actor);
+        familyId = String(couple.id);
+      } else if (!fam.partner1_id) {
+        await pg.queryArray`UPDATE familytree.families SET partner1_id = ${parent.id}::uuid, updated_by = ${actor} WHERE id = ${familyId}::uuid`;
+      } else if (!fam.partner2_id) {
+        await pg.queryArray`UPDATE familytree.families SET partner2_id = ${parent.id}::uuid, updated_by = ${actor} WHERE id = ${familyId}::uuid`;
+      } else {
+        throw statusErr("This person already has two parents recorded", 400);
+      }
+    } else if (!fam.partner1_id) {
       await pg.queryArray`UPDATE familytree.families SET partner1_id = ${parent.id}::uuid, updated_by = ${actor} WHERE id = ${familyId}::uuid`;
     } else if (!fam.partner2_id) {
       await pg.queryArray`UPDATE familytree.families SET partner2_id = ${parent.id}::uuid, updated_by = ${actor} WHERE id = ${familyId}::uuid`;
@@ -989,6 +1243,220 @@ export async function addParentToPerson(
     after: { familyId, parentId: parent.id },
   });
   return { familyId, parentId: parent.id };
+}
+
+async function parentFamilyLink(
+  pg: Client,
+  childId: string,
+  parentId: string,
+) {
+  const links = await pg.queryObject<Record<string, unknown>>`
+    SELECT f.*, fc.relation_type AS child_relation
+    FROM familytree.family_children fc
+    JOIN familytree.families f ON f.id = fc.family_id
+    WHERE fc.child_id = ${childId}::uuid
+      AND f.deleted_at IS NULL
+      AND (f.partner1_id = ${parentId}::uuid OR f.partner2_id = ${parentId}::uuid)
+    LIMIT 1
+  `;
+  if (!links.rows[0]) throw statusErr("That person is not recorded as a parent", 400);
+  return links.rows[0];
+}
+
+function otherPartnerId(fam: Record<string, unknown>, parentId: string): string | null {
+  const p1 = fam.partner1_id ? String(fam.partner1_id) : null;
+  const p2 = fam.partner2_id ? String(fam.partner2_id) : null;
+  const old = String(parentId);
+  if (p1 === old) return p2;
+  if (p2 === old) return p1;
+  return null;
+}
+
+async function siblingCount(pg: Client, familyId: string, childId: string) {
+  const r = await pg.queryObject<{ n: number }>`
+    SELECT count(*)::int AS n FROM familytree.family_children
+    WHERE family_id = ${familyId}::uuid AND child_id <> ${childId}::uuid
+  `;
+  return Number(r.rows[0]?.n || 0);
+}
+
+async function unlinkChildFromFamily(pg: Client, familyId: string, childId: string) {
+  await pg.queryArray`
+    DELETE FROM familytree.family_children
+    WHERE family_id = ${familyId}::uuid AND child_id = ${childId}::uuid
+  `;
+}
+
+async function attachChildToFamily(
+  pg: Client,
+  familyId: string,
+  childId: string,
+  rel: string,
+) {
+  const seqRow = await pg.queryObject<{ n: number }>`
+    SELECT coalesce(max(seq), -1) + 1 AS n FROM familytree.family_children WHERE family_id = ${familyId}::uuid
+  `;
+  await pg.queryArray`
+    INSERT INTO familytree.family_children (family_id, child_id, relation_type, seq)
+    VALUES (${familyId}::uuid, ${childId}::uuid, ${rel}, ${Number(seqRow.rows[0]?.n || 0)})
+    ON CONFLICT (family_id, child_id) DO UPDATE SET relation_type = EXCLUDED.relation_type
+  `;
+}
+
+async function setFamilyPartners(
+  pg: Client,
+  familyId: string,
+  actor: string,
+  p1: string | null,
+  p2: string | null,
+) {
+  await pg.queryArray`
+    UPDATE familytree.families
+    SET partner1_id = ${p1}::uuid, partner2_id = ${p2}::uuid, updated_by = ${actor}
+    WHERE id = ${familyId}::uuid
+  `;
+}
+
+function replacedPartners(
+  fam: Record<string, unknown>,
+  oldParentId: string,
+  newParentId: string | null,
+) {
+  const p1 = fam.partner1_id ? String(fam.partner1_id) : null;
+  const p2 = fam.partner2_id ? String(fam.partner2_id) : null;
+  const old = String(oldParentId);
+  return {
+    partner1Id: p1 === old ? newParentId : p1,
+    partner2Id: p2 === old ? newParentId : p2,
+  };
+}
+
+/**
+ * Unlink one parent from this child only. Siblings keep the original family.
+ */
+export async function removeParentFromPerson(
+  pg: Client,
+  tree: Record<string, unknown>,
+  auth: { contributor: Record<string, unknown> },
+  body: Record<string, unknown>,
+) {
+  const childId = String(body.childId || "");
+  const parentId = String(body.parentId || "");
+  const child = await loadPerson(pg, String(tree.id), childId);
+  if (!child) throw statusErr("Person not found", 404);
+  const parent = await loadPerson(pg, String(tree.id), parentId);
+  if (!parent) throw statusErr("Parent not found", 404);
+  const fam = await parentFamilyLink(pg, childId, parentId);
+  const familyId = String(fam.id);
+  const remainingId = otherPartnerId(fam, parentId);
+  const sibs = await siblingCount(pg, familyId, childId);
+  const actor = String(auth.contributor.display_name);
+  const rel = String(fam.child_relation || "birth");
+  let nextFamilyId: string | null = familyId;
+
+  if (sibs > 0) {
+    await unlinkChildFromFamily(pg, familyId, childId);
+    if (remainingId) {
+      const p1 = String(fam.partner1_id) === remainingId ? remainingId : null;
+      const p2 = String(fam.partner2_id) === remainingId ? remainingId : null;
+      const ins = await pg.queryObject<Record<string, unknown>>`
+        INSERT INTO familytree.families (tree_id, partner1_id, partner2_id, relationship_type, created_by, updated_by)
+        VALUES (${tree.id}::uuid, ${p1}::uuid, ${p2}::uuid, 'unknown', ${actor}, ${actor})
+        RETURNING id
+      `;
+      nextFamilyId = String(ins.rows[0].id);
+      await attachChildToFamily(pg, nextFamilyId, childId, rel);
+    } else {
+      nextFamilyId = null;
+    }
+  } else if (remainingId) {
+    const next = replacedPartners(fam, parentId, null);
+    await setFamilyPartners(pg, familyId, actor, next.partner1Id, next.partner2Id);
+  } else {
+    await unlinkChildFromFamily(pg, familyId, childId);
+    nextFamilyId = null;
+  }
+
+  await writeLog(pg, {
+    treeId: String(tree.id),
+    actorId: String(auth.contributor.id),
+    actorName: actor,
+    action: "update",
+    targetType: "persons",
+    targetId: childId,
+    summary: `Removed ${displayName(parent)} as a parent of ${displayName(child)}`,
+    before: { familyId, parentId },
+    after: { familyId: nextFamilyId, parentId: remainingId },
+  });
+  return { ok: true, familyId: nextFamilyId };
+}
+
+/**
+ * Replace one parent of this child only. Siblings keep the original parent.
+ */
+export async function replaceParentOfPerson(
+  pg: Client,
+  tree: Record<string, unknown>,
+  auth: { contributor: Record<string, unknown> },
+  body: Record<string, unknown>,
+) {
+  const childId = String(body.childId || "");
+  const oldParentId = String(body.oldParentId || "");
+  const child = await loadPerson(pg, String(tree.id), childId);
+  if (!child) throw statusErr("Person not found", 404);
+  const fam = await parentFamilyLink(pg, childId, oldParentId);
+  const parentArg = (body.parent && typeof body.parent === "object" ? body.parent : body) as Record<string, unknown>;
+  const parent = await ensurePersonFromParentArg(pg, tree, auth, parentArg);
+  const newParentId = String(parent.id);
+  if (newParentId === childId) throw statusErr("A person cannot be their own parent", 400);
+  if (newParentId === oldParentId) return { familyId: String(fam.id), parentId: newParentId };
+  const remainingId = otherPartnerId(fam, oldParentId);
+  if (remainingId && remainingId === newParentId) {
+    throw statusErr("That person is already the other parent", 400);
+  }
+  const familyId = String(fam.id);
+  const sibs = await siblingCount(pg, familyId, childId);
+  const actor = String(auth.contributor.display_name);
+  const rel = String(fam.child_relation || "birth");
+  let nextFamilyId = familyId;
+
+  const next = replacedPartners(fam, oldParentId, newParentId);
+  if (!next.partner1Id && !next.partner2Id) {
+    throw statusErr("A family needs at least one parent", 400);
+  }
+
+  if (sibs > 0) {
+    await unlinkChildFromFamily(pg, familyId, childId);
+    const dest = await ensureCoupleFamily(pg, tree, actor, next.partner1Id, next.partner2Id, "unknown");
+    nextFamilyId = String(dest.id);
+    await attachChildToFamily(pg, nextFamilyId, childId, rel);
+  } else if (next.partner1Id && next.partner2Id) {
+    const dest = await findCoupleFamily(pg, String(tree.id), next.partner1Id, next.partner2Id);
+    if (dest && String(dest.id) !== familyId) {
+      await unlinkChildFromFamily(pg, familyId, childId);
+      await attachChildToFamily(pg, String(dest.id), childId, rel);
+      await softDeleteFamilyIfNoChildren(pg, familyId, actor);
+      nextFamilyId = String(dest.id);
+    } else {
+      await setFamilyPartners(pg, familyId, actor, next.partner1Id, next.partner2Id);
+    }
+  } else {
+    await setFamilyPartners(pg, familyId, actor, next.partner1Id, next.partner2Id);
+  }
+
+  const oldParent = await loadPerson(pg, String(tree.id), oldParentId);
+  await writeLog(pg, {
+    treeId: String(tree.id),
+    actorId: String(auth.contributor.id),
+    actorName: actor,
+    action: "update",
+    targetType: "persons",
+    targetId: childId,
+    summary: `Changed a parent of ${displayName(child)} from ${oldParent ? displayName(oldParent) : "Unknown"} to ${displayName(parent)}`,
+    before: { familyId, parentId: oldParentId },
+    after: { familyId: nextFamilyId, parentId: newParentId },
+  });
+  return { familyId: nextFamilyId, parentId: newParentId };
 }
 
 export async function createEvent(

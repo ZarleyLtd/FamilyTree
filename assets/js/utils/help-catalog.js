@@ -212,7 +212,7 @@ window.FamilyTreeHelpCatalog = {
     },
     'person.tabFamily': {
       title: 'Family tab',
-      body: 'Parents, siblings, partners and children. Use the + links to add or link people. Tap a name to open that profile.'
+      body: 'Parents, siblings, partners and children. Siblings who share the same recorded parents are listed together; a Half-brother or Half-sister tag means they share one parent and the other parent is known and different. Use the + links to add or link people. Change or Remove on a parent if they were linked incorrectly.'
     },
     'person.tabTimeline': {
       title: 'Timeline tab',
@@ -228,15 +228,27 @@ window.FamilyTreeHelpCatalog = {
     },
     'person.addParent': {
       title: 'Add a parent',
-      body: 'Create a new person or link someone already in the tree as a parent. The tree keeps one parental union where possible.'
+      body: 'Create a new person or link someone already in the tree as a parent. The tree keeps one parental union where possible. If the wrong parent is already listed, use Change or Remove on that row instead.'
+    },
+    'person.changeParent': {
+      title: 'Change parent',
+      body: 'Replace this parent with someone else, new or already in the tree. Only this person’s link changes; brothers and sisters keep the original parent.'
+    },
+    'person.removeParent': {
+      title: 'Remove parent',
+      body: 'Unlinks this parent from this person. Brothers and sisters are unchanged. Use this when the wrong parent was attached; you can add the correct one afterwards.'
     },
     'person.addSibling': {
       title: 'Add a sibling',
-      body: 'Adds a brother or sister who shares this person’s parents. If no parents exist yet, a placeholder parent union is created so the sibling can be attached.'
+      body: 'Adds a brother or sister who shares this person’s parents. They are attached to the same parent union, so they show as full siblings. If no parents exist yet, a placeholder parent union is created so the sibling can be attached.'
     },
     'person.addPartner': {
       title: 'Add a partner',
-      body: 'Creates or links a spouse or partner and a family union. You can record a marriage date and place at the same time.'
+      body: 'Creates or links a spouse or partner. If this couple already exists, that family is reused rather than creating a second group. You can record a marriage date and place at the same time.'
+    },
+    'person.removePartner': {
+      title: 'Remove partner',
+      body: 'Unlinks this husband, wife or partner from this person. Both people stay in the tree. Use this when the wrong spouse was attached. Children of this union are not deleted, but they are no longer listed under this couple.'
     },
     'person.addChild': {
       title: 'Add a child',
@@ -248,7 +260,7 @@ window.FamilyTreeHelpCatalog = {
     },
     'person.familyGroup': {
       title: 'A family group',
-      body: 'One union: partner, marriage if recorded, and children. Names open profiles. This help is about the grouping, not about the people in it.'
+      body: 'One union of two partners (or one parent) and their children. The same couple is kept as a single group. Names open profiles. This help is about the grouping, not about the people in it.'
     },
     'person.event': {
       title: 'An event',

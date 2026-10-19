@@ -138,11 +138,20 @@
     createFamily: function (body) {
       return post('createFamily', withAccess(body));
     },
+    deleteFamily: function (id) {
+      return post('deleteFamily', withAccess({ id: id }));
+    },
     addChild: function (body) {
       return post('addChild', withAccess(body));
     },
     addParentToPerson: function (body) {
       return post('addParentToPerson', withAccess(body));
+    },
+    removeParentFromPerson: function (body) {
+      return post('removeParentFromPerson', withAccess(body));
+    },
+    replaceParentOfPerson: function (body) {
+      return post('replaceParentOfPerson', withAccess(body));
     },
     createEvent: function (body) {
       return post('createEvent', withAccess(body));

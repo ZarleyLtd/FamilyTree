@@ -33,16 +33,19 @@ Living-person detail is only returned when `treeCode` is valid (which is every n
 | `setSelfPerson` | POST | `{ personId }` |
 | `unlockAdmin` | POST | `{ treeCode, sessionToken, adminCode }` → `{ ok: true }` if the code matches; caller should already be a signed-in contributor. Admin-role contributors skip this. |
 | `listPersons` | GET | `{ q?, surname?, living?, hasPhoto?, limit?, offset? }` → `{ persons: PersonSummary[] }` |
-| `getPerson` | GET | `{ id }` → `{ person, events, parents: Family[], families: Family[] (with children), media, notes }` |
+| `getPerson` | GET | `{ id }` → `{ person, events, parents: Family[], families: Family[] (with children), siblings: PersonSummary[] (each with `kind`: `full` \| `half`), media, notes }` |
 | `createPerson` | POST | `{ person: {...}, birth?: EventInput, death?: EventInput }` → `{ person }` |
 | `updatePerson` | POST | `{ id, patch }` |
 | `deletePerson` | POST | `{ id }` (soft) |
-| `createFamily` | POST | `{ partner1Id?, partner2Id?, relationshipType?, marriage?: EventInput }` → `{ family }` |
+| `createFamily` | POST | `{ partner1Id?, partner2Id?, relationshipType?, marriage?: EventInput }` → `{ family }`. If both partners are set and that couple already exists, the existing family is returned (relationship may be upgraded; a marriage event is added only if none exists). |
 | `updateFamily` | POST | `{ id, patch }` |
+| `deleteFamily` | POST | `{ id }` (soft). Drops that union only; the two people and any children remain in the tree |
 | `addChild` | POST | `{ familyId, childId, relationType? }` |
 | `removeChild` | POST | `{ familyId, childId }` |
 | `reorderChildren` | POST | `{ familyId, childIds[] }` |
-| `addParentToPerson` | POST | `{ childId, parent: { existingId } \| { new: PersonInput }, sex? }` → creates/extends parent family |
+| `addParentToPerson` | POST | `{ childId, parent: { existingId } \| { new: PersonInput }, sex? }` → creates/extends parent family. Filling the second parent moves the child onto the existing couple if that pair already has a family. |
+| `removeParentFromPerson` | POST | `{ childId, parentId }` → unlinks that parent from this child only; siblings keep the original family |
+| `replaceParentOfPerson` | POST | `{ childId, oldParentId, parent: { existingId } \| { new: PersonInput }, sex? }` → this child only; siblings keep the original parent |
 | `createEvent` | POST | `{ personId \| familyId, type, dateText?, placeText?, description? }` |
 | `updateEvent` / `deleteEvent` | POST | |
 | `createNote` | POST | `{ targetType, targetId, kind?, body }` |

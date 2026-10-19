@@ -63,6 +63,7 @@ window.FamilyTreePerson = (function () {
     }
 
     function siblings() {
+      if (state.siblings && state.siblings.length) return state.siblings;
       var out = [];
       var seen = {};
       (state.parents || []).forEach(function (fam) {
@@ -72,6 +73,44 @@ window.FamilyTreePerson = (function () {
             out.push(c);
           }
         });
+      });
+      return out;
+    }
+
+    function sibTag(x) {
+      var word = x.sex === 'M' ? 'brother' : x.sex === 'F' ? 'sister' : 'sibling';
+      if (x.kind === 'half') return 'Half-' + word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    }
+
+    function coalesceFamilies(fams) {
+      var out = [];
+      var byPair = {};
+      (fams || []).forEach(function (f) {
+        var a = f.partner1 && f.partner1.id;
+        var b = f.partner2 && f.partner2.id;
+        if (!a || !b) {
+          out.push(f);
+          return;
+        }
+        var key = [a, b].sort().join('|');
+        var prev = byPair[key];
+        if (!prev) {
+          byPair[key] = f;
+          out.push(f);
+          return;
+        }
+        var seen = {};
+        (prev.children || []).forEach(function (c) {
+          seen[c.id] = 1;
+        });
+        (f.children || []).forEach(function (c) {
+          if (!seen[c.id]) {
+            prev.children = (prev.children || []).concat([c]);
+            seen[c.id] = 1;
+          }
+        });
+        if (!prev.marriage && f.marriage) prev.marriage = f.marriage;
       });
       return out;
     }
@@ -339,20 +378,36 @@ window.FamilyTreePerson = (function () {
     function renderFamily() {
       var par = parentPair();
       var sibs = siblings();
-      var fams = state.families || [];
+      var fams = coalesceFamilies(state.families || []);
       var html = '';
       html +=
         '<div class="fam-group" data-help="person.familyGroup"><div class="fam-group__title"><h3>Parents</h3>' +
         (!par.father || !par.mother ? '<button class="add-link" type="button" data-add="parent" data-help="person.addParent">+ Add parent</button>' : '') +
         '</div>';
-      html += personRows([par.father, par.mother].filter(Boolean), function (x) {
-        return { tag: x.sex === 'M' ? 'Father' : x.sex === 'F' ? 'Mother' : 'Parent' };
-      });
+      html += [par.father, par.mother].filter(Boolean).map(function (x) {
+        var tag = x.sex === 'M' ? 'Father' : x.sex === 'F' ? 'Mother' : 'Parent';
+        return (
+          '<div class="fam-parent">' +
+          U.personRow(x, { tag: tag }) +
+          '<div class="fam-parent__acts">' +
+          '<button type="button" class="add-link" data-add="change-parent" data-parent="' +
+          U.esc(x.id) +
+          '" data-help="person.changeParent">Change</button>' +
+          '<button type="button" class="add-link add-link--danger" data-add="remove-parent" data-parent="' +
+          U.esc(x.id) +
+          '" data-help="person.removeParent">Remove</button>' +
+          '</div></div>'
+        );
+      }).join('');
       if (!par.father && !par.mother) html += '<p class="empty">No parents recorded.</p>';
       html += '</div>';
       html +=
         '<div class="fam-group" data-help="person.familyGroup"><div class="fam-group__title"><h3>Siblings</h3><button class="add-link" type="button" data-add="sibling" data-help="person.addSibling">+ Add sibling</button></div>';
-      html += sibs.length ? personRows(sibs) : '<p class="empty">No siblings recorded.</p>';
+      html += sibs.length
+        ? personRows(sibs, function (x) {
+            return { tag: sibTag(x) };
+          })
+        : '<p class="empty">No siblings recorded.</p>';
       html += '</div>';
       fams.forEach(function (f) {
         var person = p();
@@ -366,7 +421,22 @@ window.FamilyTreePerson = (function () {
           '">+ Photo</button><button class="add-link" type="button" data-add="child" data-help="person.addChild" data-fam="' +
           f.id +
           '">+ Add child</button></span></div>';
-        if (other) html += U.personRow(other, { tag: f.marriage && f.marriage.dateText ? 'm. ' + f.marriage.dateText : '' });
+        if (other) {
+          html +=
+            '<div class="fam-parent">' +
+            U.personRow(other, { tag: f.marriage && f.marriage.dateText ? 'm. ' + f.marriage.dateText : '' }) +
+            '<div class="fam-parent__acts">' +
+            '<button type="button" class="add-link add-link--danger" data-add="remove-family" data-fam="' +
+            U.esc(f.id) +
+            '" data-help="person.removePartner">Remove</button>' +
+            '</div></div>';
+        } else {
+          html +=
+            '<div class="fam-parent__acts" style="margin-left:0">' +
+            '<button type="button" class="add-link add-link--danger" data-add="remove-family" data-fam="' +
+            U.esc(f.id) +
+            '" data-help="person.removePartner">Remove this group</button></div>';
+        }
         if (f.marriage && f.marriage.dateText) {
           html +=
             '<div class="fam-union">Married ' +
@@ -454,6 +524,100 @@ window.FamilyTreePerson = (function () {
               },
               person.id
             );
+          }
+        );
+      } else if (kind === 'change-parent') {
+        var oldId = b.getAttribute('data-parent');
+        var oldParent = [par.father, par.mother].filter(function (x) {
+          return x && x.id === oldId;
+        })[0];
+        var roleSex = oldParent && oldParent.sex === 'F' ? 'F' : oldParent && oldParent.sex === 'M' ? 'M' : 'U';
+        function replaceParent(payload) {
+          var body = { childId: person.id, oldParentId: oldId, sex: roleSex };
+          if (payload.id && !payload.person) body.parent = { existingId: payload.id };
+          else body.parent = { new: payload.person, birth: payload.birth, death: payload.death };
+          return API.replaceParentOfPerson(body)
+            .then(reload)
+            .then(function () {
+              U.brief('Changed parent');
+            })
+            .catch(function (err) {
+              U.brief(err.message);
+            });
+        }
+        U.chooseNewOrExisting(
+          'Change parent of ' + F.shortName(person),
+          function () {
+            U.openPersonForm({
+              title: 'Replace ' + (roleSex === 'M' ? 'father' : roleSex === 'F' ? 'mother' : 'parent'),
+              defaultSurname: roleSex === 'M' ? surname : '',
+              defaultSex: roleSex,
+              onSave: function (payload) {
+                replaceParent(payload);
+              }
+            });
+          },
+          function () {
+            U.openPersonPicker(
+              'Choose parent',
+              function (x) {
+                replaceParent(x);
+              },
+              person.id
+            );
+          }
+        );
+      } else if (kind === 'remove-family') {
+        var famRow = (state.families || []).filter(function (x) {
+          return x.id === famId;
+        })[0];
+        var otherPerson = famRow
+          ? famRow.partner1 && famRow.partner1.id === person.id
+            ? famRow.partner2
+            : famRow.partner1
+          : null;
+        var kidCount = famRow && famRow.children ? famRow.children.length : 0;
+        var who = otherPerson ? F.shortName(otherPerson) : 'this family group';
+        var msg =
+          (otherPerson
+            ? 'They will no longer be shown as a partner of ' + F.shortName(person) + '. Neither person is deleted.'
+            : 'This family group will be removed. People in the tree are not deleted.') +
+          (kidCount
+            ? ' ' +
+              kidCount +
+              (kidCount === 1 ? ' child' : ' children') +
+              ' of this union will no longer be listed under this couple.'
+            : '');
+        U.confirm('Remove ' + who + '?', msg, 'Remove', function () {
+          API.deleteFamily(famId)
+            .then(reload)
+            .then(function () {
+              U.brief('Removed');
+            })
+            .catch(function (err) {
+              U.brief(err.message);
+            });
+        });
+      } else if (kind === 'remove-parent') {
+        var removeId = b.getAttribute('data-parent');
+        var removeParent = [par.father, par.mother].filter(function (x) {
+          return x && x.id === removeId;
+        })[0];
+        U.confirm(
+          'Remove ' + (removeParent ? F.shortName(removeParent) : 'this parent') + '?',
+          'They will be unlinked as a parent of ' +
+            F.shortName(person) +
+            ' only. Brothers and sisters keep their current parents. You can add a different parent afterwards.',
+          'Remove',
+          function () {
+            API.removeParentFromPerson({ childId: person.id, parentId: removeId })
+              .then(reload)
+              .then(function () {
+                U.brief('Removed parent');
+              })
+              .catch(function (err) {
+                U.brief(err.message);
+              });
           }
         );
       } else if (kind === 'child') {

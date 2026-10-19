@@ -814,6 +814,8 @@ async function handle(req: Request) {
         return await asMut(pg, body, G.createFamily);
       case "updateFamily":
         return await asMut(pg, body, G.updateFamily);
+      case "deleteFamily":
+        return await asMut(pg, body, G.deleteFamily);
       case "addChild":
         return await asMut(pg, body, G.addChild);
       case "removeChild":
@@ -822,6 +824,10 @@ async function handle(req: Request) {
         return await asMut(pg, body, G.reorderChildren);
       case "addParentToPerson":
         return await asMut(pg, body, G.addParentToPerson);
+      case "removeParentFromPerson":
+        return await asMut(pg, body, G.removeParentFromPerson);
+      case "replaceParentOfPerson":
+        return await asMut(pg, body, G.replaceParentOfPerson);
       case "createEvent":
         return await asMut(pg, body, G.createEvent);
       case "updateEvent":

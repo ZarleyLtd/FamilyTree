@@ -100,7 +100,7 @@ A union of up to two partners and their children.
 | notes | text null | |
 | created_by, updated_by, created_at, updated_at, deleted_at | | |
 
-Index `(tree_id, partner1_id)`, `(tree_id, partner2_id)`. A person may appear in several families (remarriage).
+Index `(tree_id, partner1_id)`, `(tree_id, partner2_id)`. Unique couple index on `(tree_id, LEAST(partner1_id, partner2_id), GREATEST(partner1_id, partner2_id))` where both partners are set and the row is not deleted — one family per unordered pair. A person may appear in several families (remarriage to a different person). Single-parent families (`partner2_id` null) are not unique.
 
 ### `family_children`
 | column | type | notes |

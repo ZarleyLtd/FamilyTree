@@ -346,6 +346,15 @@ html, body { overflow-x: hidden; }
 .fam-union { font-size: .85rem; color: var(--muted); margin: .2rem 0 .3rem; display: flex; gap: .4rem; align-items: center; }
 .add-link { display: inline-flex; align-items: center; gap: .3rem; font-size: .82rem; font-weight: 600; color: var(--accent); background: none; border: 1px dashed #bcd2b4; border-radius: 999px; padding: .3rem .7rem; cursor: pointer; }
 .add-link:hover { background: var(--accent-soft); }
+.fam-parent { border-bottom: 1px solid var(--line); }
+.fam-parent .person-row { border-bottom: none; padding-bottom: .25rem; }
+.fam-parent__acts {
+  display: flex; flex-wrap: wrap; gap: .4rem;
+  padding: 0 0 .55rem .2rem; margin-left: calc(44px + .75rem);
+}
+.fam-parent__acts .add-link { min-height: 44px; box-sizing: border-box; }
+.add-link--danger { color: var(--danger); border-color: #e8c4bc; }
+.add-link--danger:hover { background: var(--warm-soft); }
 
 .timeline { list-style: none; margin: 0; padding: 0; position: relative; }
 .timeline::before { content: ""; position: absolute; left: 3.4rem; top: .4rem; bottom: .4rem; width: 2px; background: var(--line); }
