@@ -1866,6 +1866,20 @@ export async function relationship(
       .map((id) => index.personById.get(id))
       .filter(Boolean)
       .map((row) => personSummary(row as Record<string, unknown>, limit));
+  const path = rel.path
+    .map((id, i, ids) => {
+      const row = index.personById.get(id);
+      if (!row) return null;
+      const summary = personSummary(row as Record<string, unknown>, limit) as Record<string, unknown>;
+      if (id !== fromId && !rel.same) {
+        summary.kinTerm = id === toId ? rel.term || "" : relate(fromId, id, graph).term || "";
+      }
+      if (i > 0) {
+        summary.hopTerm = relate(ids[i - 1], id, graph).term || "";
+      }
+      return summary;
+    })
+    .filter(Boolean);
   return {
     fromId,
     toId,
@@ -1874,7 +1888,7 @@ export async function relationship(
     same: !!rel.same,
     unrelated: !!rel.unrelated,
     description: rel.description,
-    path: summaries(rel.path),
+    path,
     commonAncestors: summaries(rel.commonAncestorIds),
   };
 }

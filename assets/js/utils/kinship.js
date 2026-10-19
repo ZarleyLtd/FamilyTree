@@ -284,20 +284,104 @@
     return otherName + ' is ' + possessive(meName) + ' ' + rel.term + '.';
   }
 
+  function displayTerm(term) {
+    var t = String(term || '').trim();
+    if (!t) return '';
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+
+  function wrapLines(text, maxChars) {
+    var t = String(text || '').trim();
+    if (!t) return [];
+    maxChars = maxChars || 16;
+    var words = [];
+    t.split(/\s+/).forEach(function (w) {
+      if (w.length <= maxChars) {
+        words.push(w);
+        return;
+      }
+      var parts = w.split('-');
+      if (parts.length < 2) {
+        words.push(w);
+        return;
+      }
+      var acc = '';
+      parts.forEach(function (p, i) {
+        var bit = i < parts.length - 1 ? p + '-' : p;
+        if (acc && (acc + bit).length > maxChars) {
+          words.push(acc);
+          acc = bit;
+        } else {
+          acc += bit;
+        }
+      });
+      if (acc) words.push(acc);
+    });
+    var lines = [];
+    var cur = '';
+    words.forEach(function (w) {
+      var next = cur ? cur + ' ' + w : w;
+      if (cur && next.length > maxChars) {
+        lines.push(cur);
+        cur = w;
+      } else {
+        cur = next;
+      }
+    });
+    if (cur) lines.push(cur);
+    return lines;
+  }
+
   function layoutPath(persons) {
     var W = 116;
     var H = 46;
     var GAP = 32;
+    var LINE = 12;
+    var CHAR_W = 6;
+    var list = (persons || []).filter(Boolean);
+    var topLines = [];
+    var maxTop = 0;
+    list.forEach(function (p, i) {
+      var lines = i > 0 && p.kinTerm ? wrapLines(displayTerm(p.kinTerm), 16) : [];
+      topLines[i] = lines;
+      if (lines.length * LINE > maxTop) maxTop = lines.length * LINE;
+    });
+    var topPad = maxTop ? maxTop + 4 : 0;
+    var hopLines = [];
+    var maxHop = 0;
+    list.forEach(function (p, i) {
+      var lines = i > 0 && p.hopTerm ? wrapLines(displayTerm(p.hopTerm), 14) : [];
+      hopLines[i] = lines;
+      if (lines.length * LINE > maxHop) maxHop = lines.length * LINE;
+    });
+    function gapFor(lines) {
+      if (!lines || !lines.length) return GAP;
+      var longest = 0;
+      lines.forEach(function (l) {
+        if (l.length > longest) longest = l.length;
+      });
+      return Math.max(GAP, longest * CHAR_W + 12);
+    }
     var nodes = [];
     var edges = [];
-    (persons || []).forEach(function (p) {
-      if (!p) return;
-      var node = { id: p.id, person: p, x: nodes.length * (W + GAP), y: 0, w: W, h: H };
-      if (nodes.length) edges.push({ from: nodes[nodes.length - 1], to: node });
+    var x = 0;
+    list.forEach(function (p, i) {
+      if (i > 0) x += W + gapFor(hopLines[i]);
+      var node = { id: p.id, person: p, x: x, y: topPad, w: W, h: H, topLabel: topLines[i] };
+      if (nodes.length) {
+        var edge = { from: nodes[nodes.length - 1], to: node };
+        if (hopLines[i].length) edge.belowLabel = hopLines[i];
+        edges.push(edge);
+      }
       nodes.push(node);
     });
+    var belowExtra = 0;
+    if (maxHop) {
+      var labelBottom = topPad + H / 2 + 10 + maxHop;
+      belowExtra = Math.max(0, labelBottom - (topPad + H));
+    }
     var bbox = nodes.length
-      ? { x: 0, y: 0, width: nodes[nodes.length - 1].x + W, height: H }
+      ? { x: 0, y: 0, width: nodes[nodes.length - 1].x + W, height: topPad + H + belowExtra }
       : { x: 0, y: 0, width: 0, height: 0 };
     return { nodes: nodes, edges: edges, bbox: bbox };
   }
@@ -307,6 +391,8 @@
     phrase: phrase,
     ancestorsOf: ancestorsOf,
     layoutPath: layoutPath,
+    wrapLines: wrapLines,
+    displayTerm: displayTerm,
     shortName: shortName
   };
 });

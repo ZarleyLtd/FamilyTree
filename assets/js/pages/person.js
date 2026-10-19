@@ -233,7 +233,7 @@ window.FamilyTreePerson = (function () {
     }
 
     function showRelation(rel) {
-      var svg = relationSvg(rel.path || []);
+      var svg = relationSvg(rel);
       U.openSheet(
         'Relationship',
         '<div class="rel-result" data-help="sheet.relation"><div class="rel-result__term">' +
@@ -255,17 +255,35 @@ window.FamilyTreePerson = (function () {
       );
     }
 
-    function relationSvg(path) {
+    function relationSvg(rel) {
+      var path = (rel.path || []).map(function (p, i, arr) {
+        if (!p) return p;
+        if (p.kinTerm) return p;
+        if (i === arr.length - 1 && i > 0 && rel.term) {
+          return Object.assign({}, p, { kinTerm: rel.term });
+        }
+        return p;
+      });
       var layout = window.Kinship.layoutPath(path);
       if (!layout.nodes.length) return '';
       var b = layout.bbox;
       var pad = 8;
+      function relLabel(lines, x, y) {
+        if (!lines || !lines.length) return '';
+        var tspans = lines.map(function (line, i) {
+          return '<tspan x="' + x + '" dy="' + (i === 0 ? 0 : 12) + '">' + U.esc(line) + '</tspan>';
+        }).join('');
+        return '<text class="n-rel" x="' + x + '" y="' + y + '" text-anchor="middle">' + tspans + '</text>';
+      }
       var parts = layout.edges.map(function (e) {
         var x1 = e.from.x + e.from.w;
         var y1 = e.from.y + e.from.h / 2;
         var x2 = e.to.x;
-        var y2 = e.to.y + e.to.h / 2;
-        return '<path d="M' + x1 + ',' + y1 + ' H' + x2 + '" class="edge" />';
+        var html = '<path d="M' + x1 + ',' + y1 + ' H' + x2 + '" class="edge" />';
+        if (e.belowLabel && e.belowLabel.length) {
+          html += relLabel(e.belowLabel, (x1 + x2) / 2, y1 + 12);
+        }
+        return html;
       });
       layout.nodes.forEach(function (n) {
         var person = n.person || {};
@@ -273,6 +291,10 @@ window.FamilyTreePerson = (function () {
         var raw = (given + ' ' + (person.surname || '')).trim();
         if (raw.length > 16) raw = raw.slice(0, 15) + '\u2026';
         var name = U.esc(raw);
+        if (n.topLabel && n.topLabel.length) {
+          var firstY = n.y - 4 - (n.topLabel.length - 1) * 12;
+          parts.push(relLabel(n.topLabel, n.x + n.w / 2, firstY));
+        }
         parts.push(
           '<g class="node node--' + U.esc(person.sex || 'U') + '" transform="translate(' + n.x + ',' + n.y + ')">' +
           '<a href="person.html?id=' + U.esc(n.id) + '">' +
@@ -282,9 +304,11 @@ window.FamilyTreePerson = (function () {
           '</a></g>'
         );
       });
-      var w = Math.max(280, b.width + pad * 2);
-      return '<div class="rel-chart" data-help="person.relPath"><svg viewBox="' + (-pad) + ' ' + (-pad) + ' ' + (b.width + pad * 2) + ' ' + (b.height + pad * 2) +
-        '" width="' + w + '" height="78" role="img" aria-label="Relationship path">' + parts.join('') + '</svg></div>';
+      var vbW = b.width + pad * 2;
+      var vbH = b.height + pad * 2;
+      var w = Math.max(280, vbW);
+      return '<div class="rel-chart" data-help="person.relPath"><svg viewBox="' + (-pad) + ' ' + (-pad) + ' ' + vbW + ' ' + vbH +
+        '" width="' + w + '" height="' + Math.ceil(vbH) + '" role="img" aria-label="Relationship path">' + parts.join('') + '</svg></div>';
     }
 
     function editPerson() {

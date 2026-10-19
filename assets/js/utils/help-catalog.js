@@ -296,7 +296,7 @@ window.FamilyTreeHelpCatalog = {
     },
     'person.relPath': {
       title: 'Relationship path',
-      body: 'A mini chart of how the calculator walked the tree between two people (up to a common ancestor and down again). Tap a box to open that profile. The wording above is the kinship term, not a DNA result.'
+      body: 'A mini chart of how the calculator walked the tree between two people (up to a common ancestor and down again). Each box after the starting person is labelled with how they are related to that starting person. Each link is the direct relationship between those two neighbours. Tap a box to open that profile. The wording is a kinship term, not a DNA result.'
     },
     'person.relOther': {
       title: 'Compare with someone else',

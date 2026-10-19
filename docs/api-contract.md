@@ -70,7 +70,7 @@ Living-person detail is only returned when `treeCode` is valid (which is every n
 |--------|--------|---------|
 | `getDescendants` | GET | `{ focusId, generations }` → `{ persons, families }` for that many generations down, including partners |
 | `getHourglass` | GET | `{ focusId, up, down }` → ancestors and descendants in one bundle |
-| `relationship` | GET | `{ fromId, toId }` → `{ term, phrase, path: PersonSummary[], commonAncestors, description }`. `to` is `from`'s `term` ("Nuala is James's niece") |
+| `relationship` | GET | `{ fromId, toId }` → `{ term, phrase, path: (PersonSummary & { kinTerm?, hopTerm? })[], commonAncestors, description }`. `to` is `from`'s `term` ("Nuala is James's niece"). `kinTerm` is how that path person is related to `from` (omitted on `from`). `hopTerm` is the direct relationship from the previous person on the path. |
 | `timeline` | GET | `{ personId }` → `{ items }` events (including marriages) and linked media, dated ones first |
 | `onThisDay` | GET | `{ month, day }` → exact-date events, marriages and photos for that calendar day. Pass the viewer's local month and day |
 
