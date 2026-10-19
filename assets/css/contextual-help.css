@@ -1,0 +1,84 @@
+/**
+ * Contextual help: help-mode hint and anchored popover.
+ */
+body.help-mode,
+body.help-mode * {
+  cursor: help !important;
+}
+
+.help-hint {
+  position: fixed;
+  top: var(--header-h);
+  left: 0;
+  right: 0;
+  z-index: 45;
+  padding: 0.35rem 0.9rem;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: center;
+  pointer-events: none;
+}
+
+.app-header__btn[data-help-toggle][aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.help-popover {
+  position: fixed;
+  z-index: 120;
+  width: min(22rem, calc(100vw - 1.2rem));
+  max-height: min(70vh, 24rem);
+  overflow: auto;
+  padding: 0.85rem 1rem 1rem;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.help-popover__close {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.help-popover__close:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.help-popover h3 {
+  margin: 0 2rem 0.4rem 0;
+  font-size: 1rem;
+  color: var(--ink);
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.help-popover p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+@media (min-width: 760px) {
+  .help-hint {
+    left: 232px;
+  }
+  body.page-landing .help-hint {
+    left: 0;
+  }
+}

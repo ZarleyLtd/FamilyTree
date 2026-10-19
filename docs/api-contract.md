@@ -71,7 +71,7 @@ Living-person detail is only returned when `treeCode` is valid (which is every n
 | `timeline` | GET | `{ personId }` → `{ items }` events (including marriages) and linked media, dated ones first |
 | `onThisDay` | GET | `{ month, day }` → exact-date events, marriages and photos for that calendar day. Pass the viewer's local month and day |
 
-## Actions – Phase 4 (admin)
+## Actions – Phase 5 (admin)
 
 | Action | Method | Purpose |
 |--------|--------|---------|

@@ -30,8 +30,8 @@ window.FamilyTreeAdmin = (function () {
       if (!me) {
         main.innerHTML =
           '<section class="card"><h2>Admin</h2><p>Connect as a contributor first. The first person to register with the bootstrap invite is an admin. Others can enter the admin code to be promoted.</p>' +
-          '<div class="btn-row"><button class="btn btn--primary" type="button" id="admConnect">Connect</button>' +
-          '<button class="btn" type="button" id="admReg">Register with an invite</button></div></section>';
+          '<div class="btn-row"><button class="btn btn--primary" type="button" id="admConnect" data-help="admin.connect">Connect</button>' +
+          '<button class="btn" type="button" id="admReg" data-help="admin.register">Register with an invite</button></div></section>';
         $('#admConnect').onclick = function () {
           U.openConnectSheet();
         };
@@ -46,9 +46,9 @@ window.FamilyTreeAdmin = (function () {
           '<p class="muted small">Signed in as <span class="code">' +
           U.esc(me.handle) +
           '</span>. Enter the tree admin code to unlock this page for your account.</p>' +
-          '<div class="field"><label for="adminCode">Admin code</label><input type="text" id="adminCode" autocomplete="off" /></div>' +
+          '<div class="field" data-help="admin.unlock"><label for="adminCode">Admin code</label><input type="text" id="adminCode" autocomplete="off" /></div>' +
           '<p class="muted small" id="admErr"></p>' +
-          '<button class="btn btn--primary" type="button" id="admUnlock">Unlock</button></section>';
+          '<button class="btn btn--primary" type="button" id="admUnlock" data-help="admin.unlock">Unlock</button></section>';
         $('#admUnlock').onclick = function () {
           var err = $('#admErr');
           err.textContent = '';
@@ -67,24 +67,24 @@ window.FamilyTreeAdmin = (function () {
       }
       main.innerHTML =
         '<div class="two-col">' +
-        '<section class="card"><div class="card__head"><h2>Tree</h2></div>' +
+        '<section class="card" data-help="admin.tree"><div class="card__head"><h2>Tree</h2></div>' +
         '<div class="kv"><div class="kv__k">Name</div><div class="kv__v">' +
         U.esc(tree.name) +
         '</div></div>' +
         '<div class="kv"><div class="kv__k">Share code</div><div><span class="code">' +
         U.esc(A.getShareCode()) +
         '</span></div></div>' +
-        '<p class="muted small">Rotating codes and contributor management arrive in Phase 4. You can issue invites now.</p></section>' +
-        '<section class="card"><div class="card__head"><h2>Storage</h2></div>' +
+        '<p class="muted small">Rotating codes and contributor management arrive in Phase 5. You can issue invites now.</p></section>' +
+        '<section class="card" data-help="admin.storage"><div class="card__head"><h2>Storage</h2></div>' +
         '<div id="storageBox"><p class="empty">Loading\u2026</p></div></section>' +
-        '<section class="card"><div class="card__head"><h2>Issue an invite</h2></div>' +
+        '<section class="card" data-help="admin.invite"><div class="card__head"><h2>Issue an invite</h2></div>' +
         '<p class="muted small">One-time register code, 30 days. Shown once \u2014 send it in a message.</p>' +
         '<div class="field"><label for="invLabel">Label (optional)</label><input type="text" id="invLabel" placeholder="e.g. for Siobh\u00e1n" /></div>' +
         '<p class="muted small" id="invErr"></p>' +
         '<div id="invResult"></div>' +
         '<button class="btn btn--primary" type="button" id="invGo">Issue register invite</button></section>' +
         '</div>' +
-        '<section class="card"><div class="card__head"><h2>Pending invites</h2></div><div id="invList"><p class="empty">Loading\u2026</p></div></section>';
+        '<section class="card" data-help="admin.invites"><div class="card__head"><h2>Pending invites</h2></div><div id="invList"><p class="empty">Loading\u2026</p></div></section>';
 
       function fmtBytes(n) {
         n = Number(n) || 0;
@@ -154,7 +154,7 @@ window.FamilyTreeAdmin = (function () {
             $('#invResult').innerHTML =
               '<p>Invite code (shown once): <span class="code">' +
               U.esc(data.code) +
-              '</span> <button class="btn btn--sm" type="button" data-copy="' +
+              '</span> <button class="btn btn--sm" type="button" data-help="admin.copy" data-copy="' +
               U.esc(data.code) +
               '">Copy</button></p>';
             loadInvites();

@@ -3,6 +3,9 @@
  */
 (function () {
   'use strict';
+  if (window.ContextualHelp && typeof window.ContextualHelp.init === 'function') {
+    window.ContextualHelp.init();
+  }
   var page = document.body && document.body.dataset.page;
   var map = {
     home: window.FamilyTreeHome,

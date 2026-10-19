@@ -50,7 +50,7 @@ window.DescendantsChart = (function () {
     if (n.id === opts.focusId) cls += ' node--focus';
     if (n.id === opts.selectedId) cls += ' node--selected';
     if (n.partnerOf) cls += ' node--partner';
-    var g = el('g', { 'class': cls, transform: 'translate(' + x + ',' + y + ')' }, parent);
+    var g = el('g', { 'class': cls, transform: 'translate(' + x + ',' + y + ')', 'data-help': 'tree.personNode' }, parent);
     el('rect', { width: w, height: h, rx: 10 }, g);
     var nameMax = w > 124 ? 16 : 14;
     text(g, w / 2, 20, clip(labelOf(p), nameMax), 'n-name');
@@ -73,7 +73,7 @@ window.DescendantsChart = (function () {
     });
     (layout.nodes || []).forEach(function (n) {
       if (n.placeholder) {
-        var ph = el('g', { 'class': 'node node--ph', transform: 'translate(' + n.x + ',' + n.y + ')' }, nodesG);
+        var ph = el('g', { 'class': 'node node--ph', transform: 'translate(' + n.x + ',' + n.y + ')', 'data-help': 'tree.placeholder' }, nodesG);
         el('rect', { width: n.w, height: n.h, rx: 10 }, ph);
         text(ph, n.w / 2, n.h / 2 + 4, '+ Add ' + n.placeholder, '');
         ph.addEventListener('click', function () {
@@ -94,7 +94,7 @@ window.DescendantsChart = (function () {
       });
       if (n.childCount) {
         var expanded = !n.collapsed && !n.depthLimited;
-        var badge = el('g', { 'class': 'node-toggle', transform: 'translate(' + (n.x + n.w / 2) + ',' + (n.y + n.h) + ')' }, nodesG);
+        var badge = el('g', { 'class': 'node-toggle', transform: 'translate(' + (n.x + n.w / 2) + ',' + (n.y + n.h) + ')', 'data-help': 'tree.collapse' }, nodesG);
         el('circle', { r: 16, cy: 10, 'class': 'node-toggle__hit' }, badge);
         el('circle', { r: 11, cy: 10, 'class': 'node-toggle__face' }, badge);
         text(badge, 0, 14, expanded ? '\u2212' : '+' + (n.hiddenCount || n.childCount), 'n-toggle');

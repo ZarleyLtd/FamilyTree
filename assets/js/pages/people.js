@@ -42,15 +42,15 @@ window.FamilyTreePeople = (function () {
       var main = U.$('.app-main');
       main.innerHTML =
         '<div class="people-toolbar">' +
-        '<div class="search"><span class="ico">\uD83D\uDD0D</span><input type="search" id="q" placeholder="Search by name, nickname or year" autocomplete="off" /></div>' +
-        '<div class="chip-row" id="filters"></div>' +
-        '<div class="sort-row"><span id="count"></span><span>Sort: <button class="btn btn--sm btn--ghost" type="button" id="sortBtn">Surname</button> <button class="btn btn--sm btn--ghost" type="button" id="indexBtn">Surnames</button></span></div>' +
+        '<div class="search" data-help="people.search"><span class="ico">\uD83D\uDD0D</span><input type="search" id="q" placeholder="Search by name, nickname or year" autocomplete="off" /></div>' +
+        '<div class="chip-row" id="filters" data-help="people.filters"></div>' +
+        '<div class="sort-row"><span id="count"></span><span>Sort: <button class="btn btn--sm btn--ghost" type="button" id="sortBtn" data-help="people.sort">Surname</button> <button class="btn btn--sm btn--ghost" type="button" id="indexBtn" data-help="people.surnamesToggle">Surnames</button></span></div>' +
         '</div>' +
         '<div class="people-layout">' +
-        '<div class="card" id="list" style="padding-top:.2rem;padding-bottom:.2rem"></div>' +
-        '<nav class="alpha-index" id="alpha" aria-label="Jump to letter"></nav>' +
+        '<div class="card" id="list" data-help="people.list" style="padding-top:.2rem;padding-bottom:.2rem"></div>' +
+        '<nav class="alpha-index" id="alpha" aria-label="Jump to letter" data-help="people.alpha"></nav>' +
         '</div>' +
-        '<button class="fab" id="fabAdd" aria-label="Add person" title="Add person">+</button>';
+        '<button class="fab" id="fabAdd" aria-label="Add person" title="Add person" data-help="people.fab">+</button>';
       U.$('#q').value = q;
       U.$('#q').addEventListener('input', function (e) {
         q = e.target.value.trim();
@@ -188,7 +188,7 @@ window.FamilyTreePeople = (function () {
         letters.forEach(function (L) {
           indexHtml += '<h3 id="S' + L + '">' + L + '</h3>';
           Object.keys(groups[L]).sort().forEach(function (name) {
-            indexHtml += '<button type="button" class="surname-index__row" data-surname="' + U.esc(name) + '"><span>' +
+            indexHtml += '<button type="button" class="surname-index__row" data-help="people.surnameRow" data-surname="' + U.esc(name) + '"><span>' +
               U.esc(name) + '</span><span class="muted">' + groups[L][name] + '</span></button>';
           });
         });

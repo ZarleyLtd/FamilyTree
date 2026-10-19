@@ -94,10 +94,10 @@ window.FamilyTreePerson = (function () {
         banner +
         '<section class="card" id="hero"></section>' +
         '<div class="tabs" role="tablist" id="tabs">' +
-        '<button type="button" role="tab" data-tab="family" aria-selected="true">Family</button>' +
-        '<button type="button" role="tab" data-tab="timeline" aria-selected="false">Timeline</button>' +
-        '<button type="button" role="tab" data-tab="photos" aria-selected="false">Photos</button>' +
-        '<button type="button" role="tab" data-tab="notes" aria-selected="false">Notes</button></div>' +
+        '<button type="button" role="tab" data-tab="family" data-help="person.tabFamily" aria-selected="true">Family</button>' +
+        '<button type="button" role="tab" data-tab="timeline" data-help="person.tabTimeline" aria-selected="false">Timeline</button>' +
+        '<button type="button" role="tab" data-tab="photos" data-help="person.tabPhotos" aria-selected="false">Photos</button>' +
+        '<button type="button" role="tab" data-tab="notes" data-help="person.tabNotes" aria-selected="false">Notes</button></div>' +
         '<div class="profile-grid" id="grid">' +
         '<section class="card is-active" data-tab="family" id="family"></section>' +
         '<section class="card" data-tab="timeline" id="timeline"></section>' +
@@ -139,22 +139,22 @@ window.FamilyTreePerson = (function () {
         '</div>' +
         '<div class="btn-row"><span class="chip ' +
         (living ? 'chip--living' : 'chip--deceased') +
-        '">' +
+        '" data-help="person.living">' +
         (living ? 'Living' : 'Deceased') +
         '</span>' +
-        (living ? '<span class="chip chip--warm" title="Only visible to family with the link">Family only</span>' : '') +
+        (living ? '<span class="chip chip--warm" title="Only visible to family with the link" data-help="person.familyOnly">Family only</span>' : '') +
         '</div></div></div>' +
         '<div class="profile-actions">' +
         '<a class="btn btn--primary" href="tree.html?id=' +
         person.id +
-        '&view=pedigree">\uD83C\uDF33 Tree</a>' +
-        '<button class="btn" type="button" id="btnRelated">' +
+        '&view=pedigree" data-help="person.tree">\uD83C\uDF33 Tree</a>' +
+        '<button class="btn" type="button" id="btnRelated" data-help="person.related">' +
         (relatedLabel()) +
         '</button>' +
-        '<button class="btn" type="button" id="btnShare">Share</button>' +
-        '<button class="btn" type="button" id="btnPhoto">\uD83D\uDCF7 Photo</button>' +
-        '<button class="btn" type="button" id="btnEdit">\u270E Edit</button>' +
-        '<button class="btn" type="button" id="btnMore">\u22EF</button></div>';
+        '<button class="btn" type="button" id="btnShare" data-help="person.share">Share</button>' +
+        '<button class="btn" type="button" id="btnPhoto" data-help="person.photo">\uD83D\uDCF7 Photo</button>' +
+        '<button class="btn" type="button" id="btnEdit" data-help="person.edit">\u270E Edit</button>' +
+        '<button class="btn" type="button" id="btnMore" data-help="person.more">\u22EF</button></div>';
       U.$('#btnRelated').onclick = function () { openRelated(); };
       U.$('#btnShare').onclick = function () { U.copyPageLink(U.$('#btnShare')); };
       U.$('#btnEdit').onclick = editPerson;
@@ -197,13 +197,13 @@ window.FamilyTreePerson = (function () {
       var svg = relationSvg(rel.path || []);
       U.openSheet(
         'Relationship',
-        '<div class="rel-result"><div class="rel-result__term">' +
+        '<div class="rel-result" data-help="sheet.relation"><div class="rel-result__term">' +
           U.esc(rel.phrase || rel.term || 'No known relationship') +
           '</div>' +
           (rel.description ? '<p class="muted">' + U.esc(rel.description) + '</p>' : '') +
           '</div>' +
           svg +
-          '<button class="btn" type="button" id="relOther">Compare with someone else</button>',
+          '<button class="btn" type="button" id="relOther" data-help="person.relOther">Compare with someone else</button>',
         null,
         function (root) {
           U.$('#relOther', root).onclick = function () {
@@ -244,7 +244,7 @@ window.FamilyTreePerson = (function () {
         );
       });
       var w = Math.max(280, b.width + pad * 2);
-      return '<div class="rel-chart"><svg viewBox="' + (-pad) + ' ' + (-pad) + ' ' + (b.width + pad * 2) + ' ' + (b.height + pad * 2) +
+      return '<div class="rel-chart" data-help="person.relPath"><svg viewBox="' + (-pad) + ' ' + (-pad) + ' ' + (b.width + pad * 2) + ' ' + (b.height + pad * 2) +
         '" width="' + w + '" height="78" role="img" aria-label="Relationship path">' + parts.join('') + '</svg></div>';
     }
 
@@ -286,9 +286,9 @@ window.FamilyTreePerson = (function () {
         '<div class="btn-row" style="flex-direction:column;align-items:stretch">' +
           '<a class="btn" href="tree.html?id=' +
           person.id +
-          '&view=pedigree">Ancestors chart</a>' +
-          '<button class="btn" type="button" id="mSelf">This is me</button>' +
-          '<button class="btn btn--danger" type="button" id="mDelete">Delete person</button></div>',
+          '&view=pedigree" data-help="person.moreAncestors">Ancestors chart</a>' +
+          '<button class="btn" type="button" id="mSelf" data-help="person.thisIsMe">This is me</button>' +
+          '<button class="btn btn--danger" type="button" id="mDelete" data-help="person.delete">Delete person</button></div>',
         null,
         function (root) {
           U.$('#mSelf', root).onclick = function () {
@@ -342,8 +342,8 @@ window.FamilyTreePerson = (function () {
       var fams = state.families || [];
       var html = '';
       html +=
-        '<div class="fam-group"><div class="fam-group__title"><h3>Parents</h3>' +
-        (!par.father || !par.mother ? '<button class="add-link" type="button" data-add="parent">+ Add parent</button>' : '') +
+        '<div class="fam-group" data-help="person.familyGroup"><div class="fam-group__title"><h3>Parents</h3>' +
+        (!par.father || !par.mother ? '<button class="add-link" type="button" data-add="parent" data-help="person.addParent">+ Add parent</button>' : '') +
         '</div>';
       html += personRows([par.father, par.mother].filter(Boolean), function (x) {
         return { tag: x.sex === 'M' ? 'Father' : x.sex === 'F' ? 'Mother' : 'Parent' };
@@ -351,7 +351,7 @@ window.FamilyTreePerson = (function () {
       if (!par.father && !par.mother) html += '<p class="empty">No parents recorded.</p>';
       html += '</div>';
       html +=
-        '<div class="fam-group"><div class="fam-group__title"><h3>Siblings</h3><button class="add-link" type="button" data-add="sibling">+ Add sibling</button></div>';
+        '<div class="fam-group" data-help="person.familyGroup"><div class="fam-group__title"><h3>Siblings</h3><button class="add-link" type="button" data-add="sibling" data-help="person.addSibling">+ Add sibling</button></div>';
       html += sibs.length ? personRows(sibs) : '<p class="empty">No siblings recorded.</p>';
       html += '</div>';
       fams.forEach(function (f) {
@@ -359,11 +359,11 @@ window.FamilyTreePerson = (function () {
         var other = f.partner1 && f.partner1.id === person.id ? f.partner2 : f.partner1;
         var kids = f.children || [];
         html +=
-          '<div class="fam-group"><div class="fam-group__title"><h3>' +
+          '<div class="fam-group" data-help="person.familyGroup"><div class="fam-group__title"><h3>' +
           (other ? (other.sex === 'M' ? 'Husband' : other.sex === 'F' ? 'Wife' : 'Partner') : 'Children') +
-          '</h3><span class="btn-row"><button class="add-link" type="button" data-add="famphoto" data-fam="' +
+          '</h3><span class="btn-row"><button class="add-link" type="button" data-add="famphoto" data-help="person.famPhoto" data-fam="' +
           f.id +
-          '">+ Photo</button><button class="add-link" type="button" data-add="child" data-fam="' +
+          '">+ Photo</button><button class="add-link" type="button" data-add="child" data-help="person.addChild" data-fam="' +
           f.id +
           '">+ Add child</button></span></div>';
         if (other) html += U.personRow(other, { tag: f.marriage && f.marriage.dateText ? 'm. ' + f.marriage.dateText : '' });
@@ -383,8 +383,8 @@ window.FamilyTreePerson = (function () {
         html += '</div></div>';
       });
       html +=
-        '<div class="btn-row" style="margin-top:.4rem"><button class="add-link" type="button" data-add="partner">+ Add partner</button>' +
-        (!fams.length ? '<button class="add-link" type="button" data-add="child">+ Add child</button>' : '') +
+        '<div class="btn-row" style="margin-top:.4rem"><button class="add-link" type="button" data-add="partner" data-help="person.addPartner">+ Add partner</button>' +
+        (!fams.length ? '<button class="add-link" type="button" data-add="child" data-help="person.addChild">+ Add child</button>' : '') +
         '</div>';
       var el = U.$('#family');
       el.innerHTML = html;
@@ -481,7 +481,7 @@ window.FamilyTreePerson = (function () {
               title: 'Add child',
               defaultSurname: surname,
               extraHtml:
-                '<div class="field"><label>Relationship</label><div class="seg seg--block" id="fRel">' +
+                '<div class="field" data-help="sheet.relationType"><label>Relationship</label><div class="seg seg--block" id="fRel">' +
                 '<button type="button" data-value="birth" aria-pressed="true">Birth</button>' +
                 '<button type="button" data-value="adopted" aria-pressed="false">Adopted</button>' +
                 '<button type="button" data-value="step" aria-pressed="false">Step</button>' +
@@ -530,7 +530,7 @@ window.FamilyTreePerson = (function () {
               title: 'Add partner',
               defaultSex: person.sex === 'M' ? 'F' : person.sex === 'F' ? 'M' : 'U',
               extraHtml:
-                '<div class="field-row"><div class="field"><label>Marriage date</label><input type="text" id="fMarr" placeholder="e.g. 8 Jun 1941" /></div><div class="field"><label>Marriage place</label><input type="text" id="fMarrPlace" /></div></div>',
+                '<div class="field-row" data-help="sheet.dates"><div class="field"><label>Marriage date</label><input type="text" id="fMarr" placeholder="e.g. 8 Jun 1941" /></div><div class="field"><label>Marriage place</label><input type="text" id="fMarrPlace" /></div></div>',
               collectExtra: function (root, payload) {
                 payload.marriageDate = U.$('#fMarr', root) && U.$('#fMarr', root).value.trim();
                 payload.marriagePlace = U.$('#fMarrPlace', root) && U.$('#fMarrPlace', root).value.trim();
@@ -681,7 +681,7 @@ window.FamilyTreePerson = (function () {
         return 0;
       });
       U.$('#timeline').innerHTML =
-        '<div class="card__head"><h2>Timeline</h2><button class="add-link" type="button" id="addEvent">+ Add event</button></div>' +
+        '<div class="card__head"><h2>Timeline</h2><button class="add-link" type="button" id="addEvent" data-help="person.addEvent">+ Add event</button></div>' +
         (rows.length
           ? '<ul class="timeline">' +
             rows
@@ -690,7 +690,7 @@ window.FamilyTreePerson = (function () {
                   var m = row.media;
                   var my = m.dateSort ? String(m.dateSort).slice(0, 4) : '?';
                   return (
-                    '<li class="tl tl--media" data-media="' +
+                    '<li class="tl tl--media" data-help="gallery.tile" data-media="' +
                     U.esc(m.id) +
                     '"><span class="tl__year">' +
                     my +
@@ -710,7 +710,7 @@ window.FamilyTreePerson = (function () {
                 var e = row.event;
                 var year = e.dateSort ? String(e.dateSort).slice(0, 4) : '?';
                 return (
-                  '<li class="tl" data-event="' +
+                  '<li class="tl" data-help="person.event" data-event="' +
                   U.esc(e.id) +
                   '"><span class="tl__year">' +
                   year +
@@ -765,14 +765,14 @@ window.FamilyTreePerson = (function () {
       if (!U.requireContributor()) return;
       U.openSheet(
         'Edit ' + F.eventLabel(ev.type),
-        '<div class="field-row"><div class="field"><label>Date</label><input type="text" id="evDate" value="' +
+        '<div data-help="sheet.event"><div class="field-row"><div class="field" data-help="sheet.dates"><label>Date</label><input type="text" id="evDate" value="' +
           U.esc(ev.dateText || '') +
           '" /></div><div class="field"><label>Place</label><input type="text" id="evPlace" value="' +
           U.esc(ev.placeText || '') +
           '" /></div></div>' +
           '<div class="field"><label>Details</label><textarea id="evDesc" rows="2">' +
           U.esc(ev.description || '') +
-          '</textarea></div>',
+          '</textarea></div></div>',
         '<button class="btn btn--danger" type="button" id="evDel">Delete</button><button class="btn" type="button" id="evPhoto">Attach photo</button><button class="btn" type="button" data-close>Cancel</button><button class="btn btn--primary" type="button" id="evSave">Save</button>',
         function (root) {
           U.$('#evSave', root).onclick = function () {
@@ -823,16 +823,16 @@ window.FamilyTreePerson = (function () {
       var types = ['census', 'residence', 'occupation', 'baptism', 'burial', 'emigration', 'military', 'education', 'custom'];
       U.openSheet(
         'Add event for ' + F.shortName(p()),
-        '<div class="field"><label>Type</label><select id="evType">' +
+        '<div data-help="sheet.event"><div class="field"><label>Type</label><select id="evType">' +
           types
             .map(function (t) {
               return '<option value="' + t + '">' + F.eventLabel(t) + '</option>';
             })
             .join('') +
           '</select></div>' +
-          '<div class="field-row"><div class="field"><label>Date</label><input type="text" id="evDate" placeholder="e.g. 2 Apr 1911 or abt 1935" /></div>' +
+          '<div class="field-row"><div class="field" data-help="sheet.dates"><label>Date</label><input type="text" id="evDate" placeholder="e.g. 2 Apr 1911 or abt 1935" /></div>' +
           '<div class="field"><label>Place</label><input type="text" id="evPlace" /></div></div>' +
-          '<div class="field"><label>Details</label><textarea id="evDesc" rows="2"></textarea></div>',
+          '<div class="field"><label>Details</label><textarea id="evDesc" rows="2"></textarea></div></div>',
         '<button class="btn" type="button" data-close>Cancel</button><button class="btn btn--primary" type="button" id="evSave">Save</button>',
         function (root) {
           U.$('#evSave', root).onclick = function () {
@@ -861,9 +861,9 @@ window.FamilyTreePerson = (function () {
     function renderPhotos() {
       var list = state.media || [];
       U.$('#photos').innerHTML =
-        '<div class="card__head"><h2>Photos & documents</h2><button class="add-link" type="button" id="addPhoto">+ Add</button></div>' +
+        '<div class="card__head"><h2>Photos & documents</h2><button class="add-link" type="button" id="addPhoto" data-help="person.addPhoto">+ Add</button></div>' +
         (list.length
-          ? '<div class="media-grid" id="photoGrid">' + list.map(window.Lightbox.tile).join('') + '</div>'
+          ? '<div class="media-grid" id="photoGrid" data-help="person.photos">' + list.map(window.Lightbox.tile).join('') + '</div>'
           : '<p class="empty">No photos yet.</p>');
       U.$('#addPhoto').onclick = function () {
         window.MediaUploader.open({
@@ -884,7 +884,8 @@ window.FamilyTreePerson = (function () {
     function renderNotes() {
       var list = state.notes || [];
       U.$('#notes').innerHTML =
-        '<div class="card__head"><h2>Notes & research</h2><button class="add-link" type="button" id="addNote">+ Add note</button></div>' +
+        '<div class="card__head"><h2>Notes & research</h2><button class="add-link" type="button" id="addNote" data-help="person.addNote">+ Add note</button></div>' +
+        '<div data-help="person.notes">' +
         (p().bio ? '<p>' + U.esc(p().bio) + '</p>' : '') +
         (list.length
           ? list
@@ -904,16 +905,17 @@ window.FamilyTreePerson = (function () {
                 );
               })
               .join('')
-          : '<p class="empty">No notes yet.</p>');
+          : '<p class="empty">No notes yet.</p>') +
+        '</div>';
       U.$('#addNote').onclick = function () {
         if (!U.requireContributor()) return;
         U.openSheet(
           'Add note',
-          '<div class="field"><label>Kind</label><div class="seg seg--block" id="nKind">' +
+          '<div data-help="sheet.note"><div class="field"><label>Kind</label><div class="seg seg--block" id="nKind">' +
             '<button type="button" data-value="note" aria-pressed="true">Note</button>' +
             '<button type="button" data-value="research" aria-pressed="false">Research</button>' +
             '<button type="button" data-value="todo" aria-pressed="false">To do</button></div></div>' +
-            '<div class="field"><label>Text</label><textarea id="nBody" rows="4"></textarea></div>',
+            '<div class="field"><label>Text</label><textarea id="nBody" rows="4"></textarea></div></div>',
           '<button class="btn" type="button" data-close>Cancel</button><button class="btn btn--primary" type="button" id="nSave">Save</button>',
           function (root) {
             U.bindSeg(U.$('#nKind', root));

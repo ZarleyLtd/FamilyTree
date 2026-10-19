@@ -57,7 +57,7 @@ window.FanChart = (function () {
       var fill = s.side === 'pat'
         ? 'hsl(210 42% ' + light + '%)'
         : 'hsl(345 42% ' + light + '%)';
-      var sg = el('g', { 'class': 'fan-g' }, g);
+      var sg = el('g', { 'class': 'fan-g', 'data-help': 'tree.personNode' }, g);
       var path = el('path', { d: arcPath(cx, cy, s.r0, s.r1, s.a0, s.a1), 'class': 'fan-sector', fill: fill }, sg);
       if (s.id === opts.selectedId) {
         path.setAttribute('stroke', '#2a2724');
@@ -90,7 +90,7 @@ window.FanChart = (function () {
     });
     var c = layout.centre || {};
     var person = c.person || {};
-    var cg = el('g', { 'class': 'fan-g' }, g);
+    var cg = el('g', { 'class': 'fan-g', 'data-help': 'tree.personNode' }, g);
     el('circle', { cx: cx, cy: cy, r: layout.R0 - 4, 'class': 'fan-centre' }, cg);
     text(cg, cx, cy - 4, clip(given(person), 12), 'fan-text').setAttribute('font-weight', '700');
     text(cg, cx, cy + 10, clip(sur(person), 12), 'fan-text');

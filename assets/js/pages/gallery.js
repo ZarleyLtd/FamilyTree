@@ -36,14 +36,14 @@ window.FamilyTreeGallery = (function () {
       var main = U.$('.app-main');
       main.innerHTML =
         '<div class="gallery-toolbar">' +
-        '<div class="search"><span class="ico">\uD83D\uDD0D</span><input type="search" id="q" placeholder="Search titles, places, people" autocomplete="off" /></div>' +
-        '<div class="chip-row" id="kinds">' + kinds.map(function (k) {
+        '<div class="search" data-help="gallery.search"><span class="ico">\uD83D\uDD0D</span><input type="search" id="q" placeholder="Search titles, places, people" autocomplete="off" /></div>' +
+        '<div class="chip-row" id="kinds" data-help="gallery.kinds">' + kinds.map(function (k) {
           var label = k === 'all' ? 'All' : F.kindIcon(k) + ' ' + F.kindPlural(k);
           return '<span class="chip' + (k === kind ? ' is-active' : '') + '" data-k="' + k + '">' + label + '</span>';
         }).join('') + '</div>' +
-        '<div class="sort-row"><span id="count"></span><span>Group by: <button class="btn btn--sm btn--ghost" type="button" id="groupBtn"></button></span></div>' +
+        '<div class="sort-row"><span id="count"></span><span>Group by: <button class="btn btn--sm btn--ghost" type="button" id="groupBtn" data-help="gallery.group"></button></span></div>' +
         '</div><div id="grid"><p class="empty">Loading\u2026</p></div>' +
-        '<button class="fab" id="fabAdd" type="button" aria-label="Add photo" title="Add photo">\uD83D\uDCF7</button>';
+        '<button class="fab" id="fabAdd" type="button" aria-label="Add photo" title="Add photo" data-help="gallery.fab">\uD83D\uDCF7</button>';
       U.$('#kinds').addEventListener('click', function (e) {
         var c = e.target.closest('[data-k]');
         if (!c) return;

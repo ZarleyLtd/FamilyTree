@@ -9,7 +9,7 @@
     if (U && U.openSheet) {
       U.openSheet(
         title,
-        '<p>' + U.esc(message) + '</p>',
+        '<p data-help="sheet.confirm">' + U.esc(message) + '</p>',
         '<button class="btn" type="button" data-close>Cancel</button><button class="btn btn--danger" type="button" id="confirmYes">' +
           U.esc(label || 'OK') +
           '</button>',

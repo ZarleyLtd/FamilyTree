@@ -23,14 +23,14 @@ window.FamilyTreeHome = (function () {
     }
     html +=
       '<section class="card">' +
-      '<div class="field"><label for="pasteCode">I have a share code</label>' +
+      '<div class="field" data-help="landing.shareCode"><label for="pasteCode">I have a share code</label>' +
       '<input type="text" id="pasteCode" placeholder="e.g. K7PX2Q" autocomplete="off" /></div>' +
-      '<button class="btn btn--primary btn--block" type="button" id="openCode">Open the tree</button>' +
+      '<button class="btn btn--primary btn--block" type="button" id="openCode" data-help="landing.open">Open the tree</button>' +
       '<p class="muted small" style="margin-top:.6rem">Ask a family member for the link if you do not have a code.</p>' +
       '</section>';
     if (emptySetup) {
       html +=
-        '<section class="card" id="setupCard">' +
+        '<section class="card" id="setupCard" data-help="landing.setup">' +
         '<h2>Set up this family\u2019s tree</h2>' +
         '<p class="muted small">No tree exists yet. Creating one shows the share, admin and first-invite codes <strong>once</strong> \u2014 copy them somewhere safe.</p>' +
         '<div class="field"><label for="treeName">Tree name</label>' +
@@ -64,14 +64,14 @@ window.FamilyTreeHome = (function () {
               '<h1>' +
               U.esc(data.tree.name) +
               '</h1>' +
-              '<section class="card codes-once"><h2>Save these codes now</h2>' +
+              '<section class="card codes-once" data-help="landing.codes"><h2>Save these codes now</h2>' +
               '<p class="muted small">They are not stored in plaintext after this. The first person to register with the invite becomes an admin.</p>' +
               kvRow('Share code', data.shareCode, 'Anyone with this can view') +
               kvRow('Admin code', data.adminCode, 'Unlocks the admin page') +
               kvRow('First invite', data.inviteCode, 'One-time register for the first admin') +
               '<div class="btn-row" style="margin-top:1rem">' +
-              '<button class="btn btn--primary" type="button" id="goTree">Open the tree</button>' +
-              '<button class="btn" type="button" id="goReg">Register as first admin</button>' +
+              '<button class="btn btn--primary" type="button" id="goTree" data-help="landing.open">Open the tree</button>' +
+              '<button class="btn" type="button" id="goReg" data-help="sheet.register">Register as first admin</button>' +
               '</div></section></div>';
             $('#goTree').onclick = function () {
               location.href = 'index.html?t=' + encodeURIComponent(data.shareCode);
@@ -97,7 +97,7 @@ window.FamilyTreeHome = (function () {
       '</span><div class="kv__v">' +
       U.esc(hint) +
       '</div></div>' +
-      '<button class="btn btn--sm" type="button" data-copy="' +
+      '<button class="btn btn--sm" type="button" data-help="landing.copy" data-copy="' +
       U.esc(value) +
       '">Copy</button></div>'
     );
@@ -137,10 +137,10 @@ window.FamilyTreeHome = (function () {
         U.esc(me.role) +
         ' \u00b7 Connect on any device with this handle</div></div></div>' +
         '<div class="quick-grid">' +
-        '<a class="quick" href="tree.html"><span class="ico">\uD83C\uDF33</span>Tree</a>' +
-        '<a class="quick" href="people.html"><span class="ico">\uD83D\uDC65</span>People</a>' +
-        '<a class="quick" href="#" id="qAdd"><span class="ico">\u2795</span>Add person</a>' +
-        '<a class="quick" href="admin.html"><span class="ico">\u2699\uFE0F</span>Admin</a>' +
+        '<a class="quick" href="tree.html" data-help="home.quickTree"><span class="ico">\uD83C\uDF33</span>Tree</a>' +
+        '<a class="quick" href="people.html" data-help="home.quickPeople"><span class="ico">\uD83D\uDC65</span>People</a>' +
+        '<a class="quick" href="#" id="qAdd" data-help="home.quickAdd"><span class="ico">\u2795</span>Add person</a>' +
+        '<a class="quick" href="admin.html" data-help="home.quickAdmin"><span class="ico">\u2699\uFE0F</span>Admin</a>' +
         '</div>';
     } else {
       hero =
@@ -150,10 +150,10 @@ window.FamilyTreeHome = (function () {
         '</div>' +
         '<div class="muted small">Viewing as a guest. Connect to add people and photos.</div></div></div>' +
         '<div class="quick-grid">' +
-        '<a class="quick" href="tree.html"><span class="ico">\uD83C\uDF33</span>Tree</a>' +
-        '<a class="quick" href="people.html"><span class="ico">\uD83D\uDC65</span>People</a>' +
-        '<a class="quick" href="#" id="qAdd"><span class="ico">\u2795</span>Add person</a>' +
-        '<a class="quick" href="#" id="qConnect"><span class="ico">\uD83D\uDD11</span>Connect</a>' +
+        '<a class="quick" href="tree.html" data-help="home.quickTree"><span class="ico">\uD83C\uDF33</span>Tree</a>' +
+        '<a class="quick" href="people.html" data-help="home.quickPeople"><span class="ico">\uD83D\uDC65</span>People</a>' +
+        '<a class="quick" href="#" id="qAdd" data-help="home.quickAdd"><span class="ico">\u2795</span>Add person</a>' +
+        '<a class="quick" href="#" id="qConnect" data-help="home.quickConnect"><span class="ico">\uD83D\uDD11</span>Connect</a>' +
         '</div>';
     }
     var changeHtml =
@@ -165,7 +165,7 @@ window.FamilyTreeHome = (function () {
                   ? 'person.html?id=' + c.targetId
                   : 'people.html';
               return (
-                '<a class="change" href="' +
+                '<a class="change" data-help="home.changes" href="' +
                 href +
                 '" style="color:inherit;text-decoration:none"><span class="change__who">' +
                 U.esc((c.actorName || '?')[0]) +
@@ -198,23 +198,23 @@ window.FamilyTreeHome = (function () {
             .join('')
         : '<p class="empty">No surnames yet.</p>';
     main.innerHTML =
-      '<div class="search-wrap">' +
+      '<div class="search-wrap" data-help="home.search">' +
       '<div class="search"><span class="ico">\uD83D\uDD0D</span><input type="search" id="homeSearch" placeholder="Search people, e.g. a surname or year" autocomplete="off" /></div>' +
       '<div class="search-results hidden" id="homeResults"></div></div>' +
       '<section class="card" id="meCard">' +
       hero +
       '</section>' +
-      '<div class="stat-grid">' +
+      '<div class="stat-grid" data-help="home.stats">' +
       stat(stats.persons, 'people') +
       stat(stats.living, 'living') +
       stat(stats.families, 'families') +
       stat(stats.media, 'photos & documents') +
       '</div>' +
       '<div class="two-col" style="margin-top:.9rem">' +
-      '<section class="card"><div class="card__head"><h2>Recent changes</h2></div><div id="changes">' +
+      '<section class="card" data-help="home.changes"><div class="card__head"><h2>Recent changes</h2></div><div id="changes">' +
       changeHtml +
       '</div></section>' +
-      '<section class="card"><div class="card__head"><h2>Surnames</h2><a class="btn btn--sm btn--ghost" href="people.html">People</a></div>' +
+      '<section class="card" data-help="home.surnames"><div class="card__head"><h2>Surnames</h2><a class="btn btn--sm btn--ghost" href="people.html">People</a></div>' +
       '<div class="chip-row" id="surnames" style="flex-wrap:wrap">' +
       surnameHtml +
       '</div></section>' +
@@ -223,7 +223,7 @@ window.FamilyTreeHome = (function () {
       statisticsCard(stats) +
       onThisDayCard(today) +
       '</div>' +
-      '<button class="fab" id="fabAdd" aria-label="Add person" title="Add person">+</button>';
+      '<button class="fab" id="fabAdd" aria-label="Add person" title="Add person" data-help="home.fab">+</button>';
 
     function addPerson(prefill) {
       var parts = (prefill || '').split(/\s+/).filter(Boolean);
@@ -316,7 +316,7 @@ window.FamilyTreeHome = (function () {
       return '<a class="chip" href="people.html?q=' + encodeURIComponent(n.name) + '">' +
         U.esc(n.name) + ' <span class="muted">' + n.count + '</span></a>';
     }).join('');
-    return '<section class="card"><div class="card__head"><h2>Statistics</h2></div>' +
+    return '<section class="card" data-help="home.statistics"><div class="card__head"><h2>Statistics</h2></div>' +
       rows.join('') +
       (names ? '<div class="chip-row" style="flex-wrap:wrap;margin-top:.6rem">' + names + '</div>' : '') +
       '</section>';
@@ -338,7 +338,7 @@ window.FamilyTreeHome = (function () {
           (item.placeText ? ' \u00b7 ' + U.esc(item.placeText) : '') + '</div></span></a>';
       }).join('')
       : '<p class="empty">Nothing recorded for ' + U.esc(when) + '.</p>';
-    return '<section class="card"><div class="card__head"><h2>On this day</h2><span class="muted small">' +
+    return '<section class="card" data-help="home.onThisDay"><div class="card__head"><h2>On this day</h2><span class="muted small">' +
       U.esc(when) + '</span></div>' + html + '</section>';
   }
 

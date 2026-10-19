@@ -4,8 +4,8 @@ Collaborative family tree viewer/editor. Phone-first, desktop-equal. Static site
 
 ## JavaScript Module Architecture
 - **Configuration**: `/assets/js/config/app-config.js` (`FAMILYTREE_CONFIG.API_URL`, bucket URL base, limits).
-- **Utilities**: `/assets/js/utils/` (`api.js`, `tree-access.js` (share code + session token), `gen-date.js` (fuzzy genealogy dates), `kinship.js` (relationship calculator), `image-compress.js`, `brief-message.js`, `confirm-dialog.js`, `formatters.js`).
-- **Components**: `/assets/js/components/` (person-card, person-picker, event-editor, media-uploader, lightbox, pedigree-chart, descendants-chart, fan-chart, timeline, change-log-list).
+- **Utilities**: `/assets/js/utils/` (`api.js`, `tree-access.js` (share code + session token), `gen-date.js` (fuzzy genealogy dates), `kinship.js` (relationship calculator), `image-compress.js`, `brief-message.js`, `confirm-dialog.js`, `formatters.js`, `help-catalog.js`).
+- **Components**: `/assets/js/components/` (person-card, person-picker, event-editor, media-uploader, lightbox, pedigree-chart, descendants-chart, fan-chart, timeline, change-log-list, contextual-help).
 - **Pages**: `/assets/js/pages/` – one module per HTML page with an `init()`.
 - **Entry Point**: `/assets/js/main.js` routes by `document.body.dataset.page`.
 - **No Duplication**: common code must live in utils/components, never copied between pages.

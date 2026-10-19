@@ -84,27 +84,27 @@ window.FamilyTreeTree = (function () {
       main.innerHTML =
         '<div class="tree-page">' +
         '<div class="tree-toolbar">' +
-        '<div class="seg" id="viewSeg">' +
+        '<div class="seg" id="viewSeg" data-help="tree.view">' +
         '<button type="button" data-value="pedigree">Ancestors</button>' +
         '<button type="button" data-value="descendants">Descendants</button>' +
         '<button type="button" data-value="hourglass">Hourglass</button>' +
         '<button type="button" data-value="fan">Fan</button></div>' +
-        '<button class="tree-focus" type="button" id="focusBtn" title="Change focus person"></button>' +
-        '<div class="seg" id="spanSeg">' +
+        '<button class="tree-focus" type="button" id="focusBtn" title="Change focus person" data-help="tree.focus"></button>' +
+        '<div class="seg" id="spanSeg" data-help="tree.span">' +
         '<button type="button" data-value="180">180\u00b0</button>' +
         '<button type="button" data-value="360">360\u00b0</button></div>' +
-        '<div class="stepper" title="Generations"><button type="button" id="genMinus" aria-label="Fewer generations">\u2212</button><span id="genLabel"></span><button type="button" id="genPlus" aria-label="More generations">+</button></div>' +
-        '<button class="btn btn--sm" type="button" id="shareChart">Share</button>' +
+        '<div class="stepper" title="Generations" data-help="tree.gens"><button type="button" id="genMinus" aria-label="Fewer generations">\u2212</button><span id="genLabel"></span><button type="button" id="genPlus" aria-label="More generations">+</button></div>' +
+        '<button class="btn btn--sm" type="button" id="shareChart" data-help="tree.share">Share</button>' +
         '</div>' +
-        '<div class="chart-wrap" id="chartWrap">' +
+        '<div class="chart-wrap" id="chartWrap" data-help="tree.chart">' +
         '<svg id="chart" xmlns="http://www.w3.org/2000/svg"><g id="chartG"></g></svg>' +
-        '<div class="legend" id="legend"><span class="pat">Paternal line</span><span class="mat">Maternal line</span></div>' +
+        '<div class="legend" id="legend" data-help="tree.legend"><span class="pat">Paternal line</span><span class="mat">Maternal line</span></div>' +
         '<div class="chart-controls">' +
-        '<button class="btn" type="button" id="zoomIn" aria-label="Zoom in">+</button>' +
-        '<button class="btn" type="button" id="zoomOut" aria-label="Zoom out">\u2212</button>' +
-        '<button class="btn" type="button" id="fit" aria-label="Fit to screen" title="Fit to screen">\u2194</button>' +
-        '<button class="btn" type="button" id="recentre" aria-label="Recentre" title="Recentre">\u25CE</button></div>' +
-        '<div class="chart-info hidden" id="info"></div></div></div>';
+        '<button class="btn" type="button" id="zoomIn" aria-label="Zoom in" data-help="tree.zoomIn">+</button>' +
+        '<button class="btn" type="button" id="zoomOut" aria-label="Zoom out" data-help="tree.zoomOut">\u2212</button>' +
+        '<button class="btn" type="button" id="fit" aria-label="Fit to screen" title="Fit to screen" data-help="tree.fit">\u2194</button>' +
+        '<button class="btn" type="button" id="recentre" aria-label="Recentre" title="Recentre" data-help="tree.recentre">\u25CE</button></div>' +
+        '<div class="chart-info hidden" id="info" data-help="tree.chartInfo"></div></div></div>';
       var svg = U.$('#chart');
       var g = U.$('#chartG');
       pz = new Pedigree.PanZoom(svg, g);
@@ -316,10 +316,10 @@ window.FamilyTreeTree = (function () {
         U.esc(F.lifeLine(person) || 'No dates') +
         '</div></div>' +
         '<div class="btn-row" style="flex-wrap:nowrap">' +
-        (id !== focusId ? '<button class="btn btn--sm" type="button" id="infoCentre">Centre</button>' : '') +
+        (id !== focusId ? '<button class="btn btn--sm" type="button" id="infoCentre" data-help="tree.infoCentre">Centre</button>' : '') +
         '<a class="btn btn--sm btn--primary" href="person.html?id=' +
         id +
-        '">Profile</a>' +
+        '" data-help="tree.infoProfile">Profile</a>' +
         '<button class="btn btn--sm btn--icon" type="button" id="infoClose" aria-label="Close">\u2715</button></div>';
       var c = U.$('#infoCentre');
       if (c) {

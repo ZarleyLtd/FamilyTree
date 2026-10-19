@@ -165,7 +165,7 @@ window.PedigreeChart = (function () {
         if (n.id === opts.focusId) cls += ' node--focus';
         if (n.id === opts.selectedId) cls += ' node--selected';
       }
-      var ng = el('g', { 'class': cls, transform: 'translate(' + n.x + ',' + n.y + ')' }, nodesG);
+      var ng = el('g', { 'class': cls, transform: 'translate(' + n.x + ',' + n.y + ')', 'data-help': n.placeholder ? 'tree.placeholder' : 'tree.personNode' }, nodesG);
       el('rect', { width: n.w, height: n.h, rx: 10 }, ng);
       if (n.placeholder) {
         text(ng, n.w / 2, n.h / 2 + 4, '+ Add ' + n.placeholder, '', 'middle');

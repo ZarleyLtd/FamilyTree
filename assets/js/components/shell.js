@@ -9,12 +9,15 @@ window.FamilyTreeUI = (function () {
   var F = window.Formatters;
 
   var NAV = [
-    { id: 'home', href: 'index.html', ico: '\uD83C\uDFE1', label: 'Home' },
-    { id: 'people', href: 'people.html', ico: '\uD83D\uDC65', label: 'People' },
-    { id: 'tree', href: 'tree.html', ico: '\uD83C\uDF33', label: 'Tree' },
-    { id: 'gallery', href: 'gallery.html', ico: '\uD83D\uDDBC\uFE0F', label: 'Photos' },
-    { id: 'admin', href: 'admin.html', ico: '\u2699\uFE0F', label: 'Admin' }
+    { id: 'home', href: 'index.html', ico: '\uD83C\uDFE1', label: 'Home', help: 'chrome.navHome' },
+    { id: 'people', href: 'people.html', ico: '\uD83D\uDC65', label: 'People', help: 'chrome.navPeople' },
+    { id: 'tree', href: 'tree.html', ico: '\uD83C\uDF33', label: 'Tree', help: 'chrome.navTree' },
+    { id: 'gallery', href: 'gallery.html', ico: '\uD83D\uDDBC\uFE0F', label: 'Photos', help: 'chrome.navGallery' },
+    { id: 'admin', href: 'admin.html', ico: '\u2699\uFE0F', label: 'Admin', help: 'chrome.navAdmin' }
   ];
+
+  var HELP_BTN =
+    '<button type="button" class="app-header__btn" data-help-toggle aria-pressed="false" aria-label="Help: tap, then tap a control" title="Help">?</button>';
 
   function esc(s) {
     return F.esc(s);
@@ -67,26 +70,31 @@ window.FamilyTreeUI = (function () {
     var header = $('.app-header');
     if (header) {
       var chip = signedIn
-        ? '<button type="button" class="me-chip" id="meChip" title="Signed in as ' +
+        ? '<button type="button" class="me-chip" id="meChip" data-help="chrome.account" title="Signed in as ' +
           esc(me.handle) +
           '"><span class="avatar avatar--sm">' +
           esc(F.initialsFromName(me.displayName || me.handle)) +
           '</span>' +
           esc(me.displayName || me.handle) +
           '</button>'
-        : '<button type="button" class="me-chip me-chip--guest" id="meChip">Connect</button>';
+        : '<button type="button" class="me-chip me-chip--guest" id="meChip" data-help="chrome.account">Connect</button>';
       header.innerHTML =
-        (opts.back ? '<a class="app-header__btn" href="' + esc(opts.back) + '" aria-label="Back">\u2190</a>' : '') +
+        (opts.landing
+          ? '<span class="app-header__btn" aria-hidden="true" style="visibility:hidden;pointer-events:none"></span>'
+          : opts.back
+            ? '<a class="app-header__btn" href="' + esc(opts.back) + '" aria-label="Back" data-help="chrome.back">\u2190</a>'
+            : '') +
         '<div class="app-header__title">' +
         esc(opts.title || 'Family tree') +
         (opts.subtitle ? '<small>' + esc(opts.subtitle) + '</small>' : '') +
         '</div>' +
         (opts.search !== false && !opts.landing
-          ? '<a class="app-header__btn" href="people.html" aria-label="Search">\uD83D\uDD0D</a>'
+          ? '<a class="app-header__btn" href="people.html" aria-label="Search" data-help="chrome.search">\uD83D\uDD0D</a>'
           : '') +
         (!opts.landing && A.getShareCode()
-          ? '<button type="button" class="app-header__btn" id="shareLink" aria-label="Copy link">\uD83D\uDD17</button>'
+          ? '<button type="button" class="app-header__btn" id="shareLink" aria-label="Copy link" data-help="chrome.share">\uD83D\uDD17</button>'
           : '') +
+        HELP_BTN +
         (opts.landing ? '' : chip);
       var chipEl = $('#meChip');
       if (chipEl) chipEl.addEventListener('click', openAccountMenu);
@@ -99,6 +107,8 @@ window.FamilyTreeUI = (function () {
         n.href +
         '" class="' +
         (n.id === page ? 'is-active' : '') +
+        '" data-help="' +
+        n.help +
         '"><span class="ico">' +
         n.ico +
         '</span><span>' +
@@ -120,15 +130,15 @@ window.FamilyTreeUI = (function () {
     }
     openSheet(
       'Signed in as ' + me.displayName,
-      '<p class="muted small">Handle <span class="code">' +
+      '<p class="muted small" data-help="chrome.account">Handle <span class="code">' +
         esc(me.handle) +
         '</span> \u00b7 ' +
         esc(me.role) +
         '<br>Same handle and password work on any device.</p>' +
         '<div class="btn-row" style="flex-direction:column;align-items:stretch">' +
-        '<button class="btn" type="button" id="accSwitch">Connect as someone else</button>' +
-        '<button class="btn" type="button" id="accReset">Forgot password\u2026</button>' +
-        '<button class="btn btn--danger" type="button" id="accOut">Sign out</button></div>',
+        '<button class="btn" type="button" id="accSwitch" data-help="sheet.connect">Connect as someone else</button>' +
+        '<button class="btn" type="button" id="accReset" data-help="sheet.reset">Forgot password\u2026</button>' +
+        '<button class="btn btn--danger" type="button" id="accOut" data-help="chrome.account">Sign out</button></div>',
       null,
       function (root) {
         $('#accSwitch', root).onclick = function () {
@@ -159,11 +169,11 @@ window.FamilyTreeUI = (function () {
   function openConnectSheet() {
     openSheet(
       'Connect as a contributor',
-      '<p class="muted small">Use the handle and password you chose when you registered.</p>' +
+      '<div data-help="sheet.connect"><p class="muted small">Use the handle and password you chose when you registered.</p>' +
         '<div class="field"><label for="cnHandle">Handle</label><input type="text" id="cnHandle" autocomplete="username" placeholder="e.g. siobhan" /></div>' +
         '<div class="field"><label for="cnPass">Password</label><input type="password" id="cnPass" autocomplete="current-password" /></div>' +
-        '<p class="small"><a href="#" id="cnForgot">Forgot password?</a> \u00b7 <a href="#" id="cnReg">Register with an invite</a></p>' +
-        '<p class="muted small" id="cnErr"></p>',
+        '<p class="small"><a href="#" id="cnForgot" data-help="sheet.reset">Forgot password?</a> \u00b7 <a href="#" id="cnReg" data-help="sheet.register">Register with an invite</a></p>' +
+        '<p class="muted small" id="cnErr"></p></div>',
       '<button class="btn" type="button" data-close>Cancel</button><button class="btn btn--primary" type="button" id="cnGo">Connect</button>',
       function (root) {
         function go() {
@@ -207,13 +217,13 @@ window.FamilyTreeUI = (function () {
   function openRegisterSheet() {
     openSheet(
       'Register as a contributor',
-      '<p class="muted small">You need a one-time invite from an admin. It cannot be reused. After this, Connect with your handle and password on any device.</p>' +
+      '<div data-help="sheet.register"><p class="muted small">You need a one-time invite from an admin. It cannot be reused. After this, Connect with your handle and password on any device.</p>' +
         '<div class="field"><label for="rgInvite">Invite code</label><input type="text" id="rgInvite" placeholder="e.g. N8KQ2M" autocomplete="off" /></div>' +
         '<div class="field-row"><div class="field"><label for="rgHandle">Handle</label><input type="text" id="rgHandle" placeholder="letters, no spaces" autocomplete="username" /></div>' +
         '<div class="field"><label for="rgName">Display name</label><input type="text" id="rgName" placeholder="Shown on edits" /></div></div>' +
         '<div class="field-row"><div class="field"><label for="rgPass">Password</label><input type="password" id="rgPass" autocomplete="new-password" /></div>' +
         '<div class="field"><label for="rgPass2">Confirm</label><input type="password" id="rgPass2" autocomplete="new-password" /></div></div>' +
-        '<p class="muted small" id="rgErr"></p>',
+        '<p class="muted small" id="rgErr"></p></div>',
       '<button class="btn" type="button" data-close>Cancel</button><button class="btn btn--primary" type="button" id="rgGo">Register</button>',
       function (root) {
         $('#rgGo', root).onclick = function () {
@@ -250,13 +260,13 @@ window.FamilyTreeUI = (function () {
   function openResetSheet(prefillHandle) {
     openSheet(
       'Reset password',
-      '<p class="muted small">The original invite cannot reset a password. Ask an admin to issue a <strong>reset code</strong> (one use, 24 hours). Then enter it here.</p>' +
+      '<div data-help="sheet.reset"><p class="muted small">The original invite cannot reset a password. Ask an admin to issue a <strong>reset code</strong> (one use, 24 hours). Then enter it here.</p>' +
         '<div class="field"><label for="rsHandle">Handle</label><input type="text" id="rsHandle" value="' +
         esc(prefillHandle || '') +
         '" autocomplete="username" /></div>' +
         '<div class="field"><label for="rsCode">Reset code</label><input type="text" id="rsCode" placeholder="from an admin" autocomplete="off" /></div>' +
         '<div class="field"><label for="rsPass">New password</label><input type="password" id="rsPass" autocomplete="new-password" /></div>' +
-        '<p class="muted small" id="rsErr"></p>',
+        '<p class="muted small" id="rsErr"></p></div>',
       '<button class="btn" type="button" data-close>Cancel</button><button class="btn btn--primary" type="button" id="rsGo">Set new password</button>',
       function (root) {
         $('#rsGo', root).onclick = function () {
@@ -290,10 +300,10 @@ window.FamilyTreeUI = (function () {
     }
     openSheet(
       'Connect to edit',
-      '<p>Anyone with the family link can look around. To add or change people, photos or notes, connect as a contributor.</p>' +
+      '<p data-help="sheet.connect">Anyone with the family link can look around. To add or change people, photos or notes, connect as a contributor.</p>' +
         '<div class="btn-row" style="flex-direction:column;align-items:stretch">' +
-        '<button class="btn btn--primary" type="button" id="needIn">Connect</button>' +
-        '<button class="btn" type="button" id="needReg">Register with an invite</button></div>',
+        '<button class="btn btn--primary" type="button" id="needIn" data-help="sheet.connect">Connect</button>' +
+        '<button class="btn" type="button" id="needReg" data-help="sheet.register">Register with an invite</button></div>',
       null,
       function (root) {
         $('#needIn', root).onclick = function () {
@@ -315,10 +325,10 @@ window.FamilyTreeUI = (function () {
     root.className = 'sheet-backdrop';
     root.id = 'sheet';
     root.innerHTML =
-      '<div class="sheet" role="dialog" aria-modal="true"><div class="sheet__grab"></div>' +
+      '<div class="sheet" role="dialog" aria-modal="true" data-help="sheet.dialog"><div class="sheet__grab"></div>' +
       '<div class="sheet__head"><h2>' +
       esc(title) +
-      '</h2><button class="btn btn--icon" type="button" data-close aria-label="Close">\u2715</button></div>' +
+      '</h2><span class="btn-row"><button class="btn btn--icon" type="button" data-help-toggle aria-pressed="false" aria-label="Help: tap, then tap a control" title="Help">?</button><button class="btn btn--icon" type="button" data-close aria-label="Close">\u2715</button></span></div>' +
       '<div class="sheet__body">' +
       bodyHtml +
       '</div>' +
@@ -350,7 +360,7 @@ window.FamilyTreeUI = (function () {
     opts = opts || {};
     var meta = opts.meta != null ? opts.meta : F.lifespan(p) + (p.birthPlaceShort ? ' \u00b7 ' + p.birthPlaceShort : '');
     return (
-      '<a class="person-row" href="person.html?id=' +
+      '<a class="person-row" data-help="chrome.personRow" href="person.html?id=' +
       esc(p.id) +
       '">' +
       avatar(p) +
@@ -412,7 +422,7 @@ window.FamilyTreeUI = (function () {
     var living = v.living != null ? v.living : true;
     var body =
       (cfg.intro ? '<p class="muted small">' + esc(cfg.intro) + '</p>' : '') +
-      '<div class="field-row">' +
+      '<div data-help="sheet.personForm"><div class="field-row">' +
       '<div class="field"><label>Given names</label><input type="text" id="fGiven" autocomplete="off" placeholder="e.g. Mary Josephine" value="' +
       esc(v.given || v.givenNames || '') +
       '" /></div>' +
@@ -426,7 +436,7 @@ window.FamilyTreeUI = (function () {
       '<div class="field"><label>Nickname</label><input type="text" id="fNick" value="' +
       esc(v.nickname || '') +
       '" /></div></div>' +
-      '<div class="field"><label>Sex</label><div class="seg seg--block" id="fSex">' +
+      '<div class="field" data-help="sheet.sex"><label>Sex</label><div class="seg seg--block" id="fSex">' +
       '<button type="button" data-value="M" aria-pressed="' +
       (sex === 'M') +
       '">Male</button>' +
@@ -437,25 +447,26 @@ window.FamilyTreeUI = (function () {
       (sex === 'U') +
       '">Unknown</button></div></div>' +
       '<div class="field-row">' +
-      '<div class="field"><label>Birth date</label><input type="text" id="fBirth" placeholder="e.g. abt 1842, Q2 1864" value="' +
+      '<div class="field" data-help="sheet.dates"><label>Birth date</label><input type="text" id="fBirth" placeholder="e.g. abt 1842, Q2 1864" value="' +
       esc(v.birth || v.birthDateText || '') +
       '" /><span class="hint">Approximate is fine: abt, bef, aft, 1850–1855</span></div>' +
       '<div class="field"><label>Birth place</label><input type="text" id="fBirthPlace" placeholder="Townland, county" value="' +
       esc(v.birthPlace || v.birthPlaceShort || '') +
       '" /></div></div>' +
-      '<div class="toggle"><div><strong>Living</strong><div class="hint muted small">Living people are only shown to family with the link</div></div>' +
+      '<div class="toggle" data-help="sheet.living"><div><strong>Living</strong><div class="hint muted small">Living people are only shown to family with the link</div></div>' +
       '<button type="button" class="switch" id="fLiving" role="switch" aria-checked="' +
       living +
       '"></button></div>' +
       '<div id="deathFields" class="' +
       (living ? 'hidden' : '') +
       '"><div class="field-row">' +
-      '<div class="field"><label>Death date</label><input type="text" id="fDeath" placeholder="e.g. 14 Mar 1931" value="' +
+      '<div class="field" data-help="sheet.dates"><label>Death date</label><input type="text" id="fDeath" placeholder="e.g. 14 Mar 1931" value="' +
       esc(v.death || v.deathDateText || '') +
       '" /></div>' +
       '<div class="field"><label>Death place</label><input type="text" id="fDeathPlace" value="' +
       esc(v.deathPlace || v.deathPlaceShort || '') +
       '" /></div></div></div>' +
+      '</div>' +
       (cfg.extraHtml || '');
     openSheet(
       cfg.title || 'Add a person',
@@ -494,7 +505,7 @@ window.FamilyTreeUI = (function () {
   function openPersonPicker(title, onPick, excludeId) {
     openSheet(
       title,
-      '<div class="search"><span class="ico">\uD83D\uDD0D</span><input type="search" id="pkQ" placeholder="Search by name or year" autocomplete="off" /></div><div id="pkList" style="margin-top:.6rem"></div>',
+      '<div data-help="sheet.picker"><div class="search"><span class="ico">\uD83D\uDD0D</span><input type="search" id="pkQ" placeholder="Search by name or year" autocomplete="off" /></div><div id="pkList" style="margin-top:.6rem"></div></div>',
       null,
       function (root) {
         var list = $('#pkList', root);
@@ -547,7 +558,7 @@ window.FamilyTreeUI = (function () {
   function chooseNewOrExisting(title, onNew, onExisting) {
     openSheet(
       title,
-      '<div class="btn-row" style="flex-direction:column;align-items:stretch">' +
+      '<div class="btn-row" style="flex-direction:column;align-items:stretch" data-help="sheet.choose">' +
         '<button class="btn btn--primary" type="button" id="chNew">\u2795 Create a new person</button>' +
         '<button class="btn" type="button" id="chExisting">\uD83D\uDD0E Choose someone already in the tree</button></div>',
       null,

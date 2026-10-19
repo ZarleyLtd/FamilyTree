@@ -31,22 +31,22 @@
 
     U.openSheet(
       'Add photo or document',
-      '<div class="btn-row">' +
+      '<div data-help="sheet.upload"><div class="btn-row">' +
         '<label class="btn file-btn">Take photo<input type="file" accept="image/*" capture="environment" data-file hidden /></label>' +
         '<label class="btn file-btn">Choose photo<input type="file" accept="image/*" data-file hidden /></label></div>' +
         '<p class="muted small" id="upStatus">Large image files are resized to about 100 KB before they are saved. Don\u2019t use this as a place to store your hi-res images.</p>' +
         '<div class="upload-preview" id="upPrev" hidden></div>' +
         '<div id="upForm" hidden>' +
-        '<div class="field"><label>Kind</label><div class="chip-row" id="upKind">' + kindChips + '</div></div>' +
+        '<div class="field" data-help="sheet.uploadKind"><label>Kind</label><div class="chip-row" id="upKind">' + kindChips + '</div></div>' +
         '<div class="field"><label for="upTitle">Title</label><input type="text" id="upTitle" placeholder="e.g. Granny at Dollymount, 1952" /></div>' +
         '<div class="field"><label for="upCaption">Caption</label><textarea id="upCaption" rows="2" placeholder="Optional"></textarea></div>' +
         '<div class="field-row"><div class="field"><label for="upDate">Date</label><input type="text" id="upDate" placeholder="abt 1952" /></div>' +
         '<div class="field"><label for="upPlace">Place</label><input type="text" id="upPlace" /></div></div>' +
-        '<div class="field"><label>People in this item</label><div class="people-pick" id="upSelected"></div>' +
+        '<div class="field" data-help="sheet.uploadPeople"><label>People in this item</label><div class="people-pick" id="upSelected"></div>' +
         '<div class="search" style="margin-top:.45rem"><span class="ico">\uD83D\uDD0D</span><input type="search" id="upQ" placeholder="Search to add someone" autocomplete="off" /></div>' +
         '<div id="upResults"></div></div>' +
         '<label class="checkline" id="upPrimaryWrap"><input type="checkbox" id="upPrimary" /> Set as their profile photo</label>' +
-        '</div>',
+        '</div></div>',
       '<button class="btn" type="button" data-close>Cancel</button><button class="btn btn--primary" type="button" id="upSave" disabled>Upload</button>',
       function (root) {
         function kind() {

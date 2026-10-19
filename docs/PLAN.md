@@ -1,6 +1,6 @@
 # FamilyTree – development plan
 
-_Last updated: 2026-10-19 (Phase 3 implemented)_
+_Last updated: 2026-10-19 (Phase 4 implemented)_
 
 ## 1. Goal
 
@@ -88,7 +88,7 @@ Each phase ends with: deployed Edge Function, migration applied, site live on Pa
 - [x] **People list** `people.html`: search as you type (name, year), filters (surname, living/deceased, has photo, missing data), sort, alphabet index on desktop, compact cards on phone
 - [x] **Fuzzy dates**: `GenDate.parse("abt 1842" | "bef 1900" | "1850–1855" | "12 Mar 1901" | "Mar 1901" | "1901")` → `{ text, sort, qualifier, end }`, `GenDate.format()`
 - [x] **Change log**: written server-side for every mutation; "Recent changes" on home
-- [x] **Edit & soft-delete** persons/families/events with confirm dialog; undo via admin revert (Phase 4 UI)
+- [x] **Edit & soft-delete** persons/families/events with confirm dialog; undo via admin revert (Phase 5 UI)
 - [x] **Pedigree chart v1** `tree.html?id=&view=pedigree`: 4 generations, SVG, tap a card to recentre, tap name to open profile; vertical layout on phone, horizontal on desktop
 - [x] Mobile/desktop QA pass at 360px and 1280px
 
@@ -110,7 +110,17 @@ Each phase ends with: deployed Edge Function, migration applied, site live on Pa
 - [x] **Timeline** on profile (events + photos by date); **surname index**; **statistics** page section; "on this day" on home
 - [x] Share/deep-link buttons (copy link includes `?t=`)
 
-### Phase 4 – Collaboration quality
+### Phase 4 – Contextual help
+
+- [x] Header **?** on every page (including the no-code landing): tap it, then tap a control
+- [x] Help mode intercepts the next tap (charts do not pan; links and FABs do not run); Escape or a second tap on **?** cancels
+- [x] Anchored popover with feature copy (never the person/photo/data); dismiss with Close or tap outside
+- [x] `data-help` keys; nearest ancestor wins; otherwise the page-level blurb
+- [x] Catalog in `assets/js/utils/help-catalog.js`; engine in `assets/js/components/contextual-help.js`
+- [x] Sheets and lightbox carry the same **?** so overlay fields can be explained
+- [x] Phone 360px and desktop 1280px QA
+
+### Phase 5 – Collaboration quality
 
 - [ ] **Admin page** `admin.html` (unlocked with admin code): tree settings, rotate share/admin codes, **issue invite**, **issue password-reset code**, contributors list (rename / disable / make admin), sessions, full change log with diff view and **revert**, purge soft-deleted
 - [ ] **Duplicate detection** (same surname + similar given name + birth year ±2) when adding; **merge persons** tool
@@ -118,7 +128,7 @@ Each phase ends with: deployed Edge Function, migration applied, site live on Pa
 - [ ] **Data quality report**: persons with no parents, no dates, children born before parents, etc.
 - [ ] Optional **Realtime** pulse table so open pages refresh when someone else edits (Scrabble pattern)
 
-### Phase 5 – Interchange, sources, multi-family
+### Phase 6 – Interchange, sources, multi-family
 
 - [ ] **GEDCOM export** (7.0) including media manifest; **GEDCOM import** (5.5.1 / 7.0) mapping INDI/FAM/EVEN/OBJE/NOTE
 - [ ] **Sources & citations**: `sources`, `citations`, `repositories` tables; cite a fact; confidence; citation list on profile
@@ -139,7 +149,8 @@ Each phase ends with: deployed Edge Function, migration applied, site live on Pa
 
 ## 6. UI principles (phone and desktop)
 
-- CSS custom properties for colours/spacing; one `style.css` plus `brief-message.css`.
+- CSS custom properties for colours/spacing; one `style.css` plus `brief-message.css` and `contextual-help.css`.
+- Contextual help: header **?** then tap a control. Copy explains the feature, never the record.
 - Layout breakpoints: `< 700px` phone (bottom tab bar, stacked cards, full-screen sheets for editing), `≥ 700px` tablet/desktop (left nav, two-column profile, modal dialogs).
 - Touch targets ≥ 44px; charts support pinch-zoom and drag; desktop gets wheel zoom, hover tooltips, keyboard navigation in lightbox.
 - Every list has search-as-you-type; every person reference is a link to the profile.
