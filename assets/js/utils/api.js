@@ -111,6 +111,21 @@
     getPedigree: function (focusId, generations) {
       return get('getPedigree', withTree({ focusId: focusId, generations: generations }));
     },
+    getDescendants: function (focusId, generations) {
+      return get('getDescendants', withTree({ focusId: focusId, generations: generations }));
+    },
+    getHourglass: function (focusId, up, down) {
+      return get('getHourglass', withTree({ focusId: focusId, up: up, down: down }));
+    },
+    relationship: function (fromId, toId) {
+      return get('relationship', withTree({ fromId: fromId, toId: toId }));
+    },
+    timeline: function (personId) {
+      return get('timeline', withTree({ personId: personId }));
+    },
+    onThisDay: function (month, day) {
+      return get('onThisDay', withTree({ month: month, day: day }));
+    },
     createPerson: function (body) {
       return post('createPerson', withAccess(body));
     },

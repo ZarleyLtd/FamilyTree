@@ -26,6 +26,32 @@ window.FamilyTreeUI = (function () {
     return Array.prototype.slice.call((root || document).querySelectorAll(sel));
   }
 
+  function copyPageLink(anchor) {
+    var url = A.shareUrl();
+    function done() {
+      brief('Link copied', anchor);
+    }
+    function legacy() {
+      var ta = document.createElement('textarea');
+      ta.value = url;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        done();
+      } catch (e) {
+        brief('Could not copy the link', anchor);
+      }
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done).catch(legacy);
+    } else legacy();
+  }
+
   function brief(text, anchor, ms) {
     if (window.BriefMessage && BriefMessage.show) {
       BriefMessage.show(text, anchor || null, { durationMs: ms || 1400 });
@@ -58,9 +84,14 @@ window.FamilyTreeUI = (function () {
         (opts.search !== false && !opts.landing
           ? '<a class="app-header__btn" href="people.html" aria-label="Search">\uD83D\uDD0D</a>'
           : '') +
+        (!opts.landing && A.getShareCode()
+          ? '<button type="button" class="app-header__btn" id="shareLink" aria-label="Copy link">\uD83D\uDD17</button>'
+          : '') +
         (opts.landing ? '' : chip);
       var chipEl = $('#meChip');
       if (chipEl) chipEl.addEventListener('click', openAccountMenu);
+      var shareEl = $('#shareLink');
+      if (shareEl) shareEl.addEventListener('click', function () { copyPageLink(shareEl); });
     }
     var links = NAV.map(function (n) {
       return (
@@ -564,6 +595,7 @@ window.FamilyTreeUI = (function () {
     $$: $$,
     esc: esc,
     brief: brief,
+    copyPageLink: copyPageLink,
     renderShell: renderShell,
     openConnectSheet: openConnectSheet,
     openRegisterSheet: openRegisterSheet,

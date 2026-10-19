@@ -48,3 +48,4 @@ Static files; `npx serve .` locally or GitHub Pages (`main`, root). Relative pat
 4. Add a parent and a partner → pedigree shows them; tap to recentre.
 5. (Phase 2) Upload a photo from a phone → appears on profile and in Gallery, file ≤ 150 KB in Storage.
 6. Check both at 360px wide (devtools phone emulation or a real phone) and at desktop width.
+7. (Phase 3) Tree page: Ancestors, Descendants (collapse a branch), Hourglass, Fan (180°/360°, tap a sector to recentre). Pan, pinch or wheel, fit, and recentre. On a profile, "How am I related?" after "This is me" on someone else. Home shows statistics and "On this day". People → Surnames jumps into that name. Share copies a link that includes `?t=`.

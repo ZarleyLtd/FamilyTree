@@ -1,6 +1,6 @@
 # FamilyTree – development plan
 
-_Last updated: 2026-10-19 (Phase 2 implemented)_
+_Last updated: 2026-10-19 (Phase 3 implemented)_
 
 ## 1. Goal
 
@@ -102,13 +102,13 @@ Each phase ends with: deployed Edge Function, migration applied, site live on Pa
 
 ### Phase 3 – Views and navigation
 
-- [ ] **Descendants chart**: tidy-tree layout (simple Reingold–Tilford), partners shown beside, generations collapsible
-- [ ] **Hourglass**: ancestors above + descendants below a focus person
-- [ ] **Fan chart**: SVG arcs, 4–6 generations, 180°/360°, colour by paternal/maternal line, tap to recentre
-- [ ] **Pan/zoom** for all charts: pointer events (drag, pinch, wheel), fit-to-screen, recentre
-- [ ] **Relationship calculator** (`kinship.js`): BFS to common ancestors → "X is Y's second cousin once removed", path rendered as a mini chart; "How am I related?" uses the signed-in contributor's `self_person_id`
-- [ ] **Timeline** on profile (events + photos by date); **surname index**; **statistics** page section; "on this day" on home
-- [ ] Share/deep-link buttons (copy link includes `?t=`)
+- [x] **Descendants chart**: tidy-tree layout (simple Reingold–Tilford), partners shown beside, generations collapsible
+- [x] **Hourglass**: ancestors above + descendants below a focus person
+- [x] **Fan chart**: SVG arcs, 4–6 generations, 180°/360°, colour by paternal/maternal line, tap to recentre
+- [x] **Pan/zoom** for all charts: pointer events (drag, pinch, wheel), fit-to-screen, recentre
+- [x] **Relationship calculator** (`kinship.js`): BFS to common ancestors → "X is Y's second cousin once removed", path rendered as a mini chart; "How am I related?" uses the signed-in contributor's `self_person_id`
+- [x] **Timeline** on profile (events + photos by date); **surname index**; **statistics** page section; "on this day" on home
+- [x] Share/deep-link buttons (copy link includes `?t=`)
 
 ### Phase 4 – Collaboration quality
 

@@ -116,7 +116,9 @@ window.FamilyTreeHome = (function () {
     });
   }
 
-  function renderHome(tree, stats, changes, me) {
+  var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  function renderHome(tree, stats, changes, me, today) {
     document.body.classList.remove('page-landing');
     U.renderShell({ title: tree.name, subtitle: 'Shared family tree' });
     var main = $('.app-main');
@@ -217,6 +219,10 @@ window.FamilyTreeHome = (function () {
       surnameHtml +
       '</div></section>' +
       '</div>' +
+      '<div class="two-col" style="margin-top:.9rem">' +
+      statisticsCard(stats) +
+      onThisDayCard(today) +
+      '</div>' +
       '<button class="fab" id="fabAdd" aria-label="Add person" title="Add person">+</button>';
 
     function addPerson(prefill) {
@@ -287,6 +293,55 @@ window.FamilyTreeHome = (function () {
     return '<div class="stat"><div class="stat__n">' + (n || 0) + '</div><div class="stat__l">' + label + '</div></div>';
   }
 
+  function personLink(p, text) {
+    if (!p || !p.id) return U.esc(text);
+    return '<a href="person.html?id=' + U.esc(p.id) + '">' + U.esc(text) + '</a>';
+  }
+
+  function statisticsCard(stats) {
+    var rows = [];
+    if (stats.longestLived) {
+      var life = stats.longestLived;
+      rows.push('<div class="otd otd--stack">' + personLink(life, (life.givenNames || '') + ' ' + (life.surname || '')) +
+        '<span class="muted">Longest lived, ' + life.years + ' years</span></div>');
+    }
+    if (stats.oldestLiving) {
+      var old = stats.oldestLiving;
+      rows.push('<div class="otd otd--stack">' + personLink(old, (old.givenNames || '') + ' ' + (old.surname || '')) +
+        '<span class="muted">Oldest living, born ' + old.birthYear + '</span></div>');
+    }
+    rows.push('<div class="otd otd--stack"><span>' + (stats.withPhoto || 0) + ' with a photo</span><span class="muted">' +
+      (stats.missingBirth || 0) + ' missing a birth year</span></div>');
+    var names = (stats.commonNames || []).map(function (n) {
+      return '<a class="chip" href="people.html?q=' + encodeURIComponent(n.name) + '">' +
+        U.esc(n.name) + ' <span class="muted">' + n.count + '</span></a>';
+    }).join('');
+    return '<section class="card"><div class="card__head"><h2>Statistics</h2></div>' +
+      rows.join('') +
+      (names ? '<div class="chip-row" style="flex-wrap:wrap;margin-top:.6rem">' + names + '</div>' : '') +
+      '</section>';
+  }
+
+  function onThisDayCard(today) {
+    var when = today && today.month ? MONTHS[(today.month || 1) - 1] + ' ' + today.day : 'today';
+    var items = (today && today.items) || [];
+    var html = items.length
+      ? items.map(function (item) {
+        var what = item.kind === 'media'
+          ? (item.title || 'Photo')
+          : (item.label || ((item.type === 'birth' ? 'Born' : item.type === 'death' ? 'Died' : item.type === 'marriage' ? 'Married' : (item.title || item.type || 'Event')) +
+            (((item.givenNames || '') + ' ' + (item.surname || '')).trim() ? ': ' + ((item.givenNames || '') + ' ' + (item.surname || '')).trim() : '')));
+        var ago = item.yearsAgo === 0 ? 'today' : item.yearsAgo ? item.yearsAgo + ' years ago' : '';
+        var href = item.personId ? 'person.html?id=' + encodeURIComponent(item.personId) : (item.kind === 'media' ? 'gallery.html' : 'people.html');
+        return '<a class="otd" href="' + href + '"><span class="otd__year">' + U.esc(item.year || '') +
+          '</span><span><div class="tl__title">' + U.esc(what) + '</div><div class="tl__meta">' + U.esc(ago) +
+          (item.placeText ? ' \u00b7 ' + U.esc(item.placeText) : '') + '</div></span></a>';
+      }).join('')
+      : '<p class="empty">Nothing recorded for ' + U.esc(when) + '.</p>';
+    return '<section class="card"><div class="card__head"><h2>On this day</h2><span class="muted small">' +
+      U.esc(when) + '</span></div>' + html + '</section>';
+  }
+
   function init() {
     A = window.TreeAccess;
     API = window.FamilyTreeAPI;
@@ -309,8 +364,15 @@ window.FamilyTreeHome = (function () {
       .then(function (pair) {
         var tree = pair[0];
         var me = pair[1];
-        return Promise.all([API.stats(), API.recentChanges(8)]).then(function (rest) {
-          renderHome(tree, rest[0] || {}, (rest[1] && rest[1].changes) || [], me);
+        var now = new Date();
+        return Promise.all([
+          API.stats(),
+          API.recentChanges(8),
+          API.onThisDay(now.getMonth() + 1, now.getDate()).catch(function () {
+            return { month: now.getMonth() + 1, day: now.getDate(), items: [] };
+          })
+        ]).then(function (rest) {
+          renderHome(tree, rest[0] || {}, (rest[1] && rest[1].changes) || [], me, rest[2] || { items: [] });
           if (new URLSearchParams(location.search).get('register') === '1' && !me) {
             U.openRegisterSheet();
           }

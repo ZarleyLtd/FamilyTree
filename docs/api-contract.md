@@ -48,7 +48,7 @@ Living-person detail is only returned when `treeCode` is valid (which is every n
 | `createNote` | POST | `{ targetType, targetId, kind?, body }` |
 | `getPedigree` | GET | `{ focusId, generations }` → `{ persons: PersonSummary[], families: FamilyLink[] }` |
 | `recentChanges` | GET | `{ limit? }` → `{ changes: ChangeLogRow[] }` |
-| `stats` | GET | → `{ persons, living, families, media, surnames: [{surname,count}] }` |
+| `stats` | GET | → `{ persons, living, families, media, surnames, withPhoto, missingBirth, longestLived, oldestLiving, commonNames }` |
 
 ## Actions – Phase 2
 
@@ -65,11 +65,11 @@ Living-person detail is only returned when `treeCode` is valid (which is every n
 
 | Action | Method | Purpose |
 |--------|--------|---------|
-| `getDescendants` | GET | `{ focusId, generations }` |
-| `getHourglass` | GET | `{ focusId, up, down }` |
-| `relationship` | GET | `{ fromId, toId }` → `{ term, path: PersonSummary[], commonAncestors }` |
-| `timeline` | GET | `{ personId }` → events + media in date order |
-| `onThisDay` | GET | `{ month, day }` |
+| `getDescendants` | GET | `{ focusId, generations }` → `{ persons, families }` for that many generations down, including partners |
+| `getHourglass` | GET | `{ focusId, up, down }` → ancestors and descendants in one bundle |
+| `relationship` | GET | `{ fromId, toId }` → `{ term, phrase, path: PersonSummary[], commonAncestors, description }`. `to` is `from`'s `term` ("Nuala is James's niece") |
+| `timeline` | GET | `{ personId }` → `{ items }` events (including marriages) and linked media, dated ones first |
+| `onThisDay` | GET | `{ month, day }` → exact-date events, marriages and photos for that calendar day. Pass the viewer's local month and day |
 
 ## Actions – Phase 4 (admin)
 

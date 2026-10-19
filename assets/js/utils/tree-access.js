@@ -31,6 +31,14 @@
     localStorage.removeItem(CODE_KEY);
   }
 
+  function shareUrl(href) {
+    var url = new URL(href || location.href, location.href);
+    var code = getShareCode();
+    if (code) url.searchParams.set('t', code);
+    url.hash = '';
+    return url.toString();
+  }
+
   function getSessionToken() {
     return localStorage.getItem(SESSION_KEY) || '';
   }
@@ -63,6 +71,7 @@
     setShareCode: setShareCode,
     captureShareCode: captureShareCode,
     clearShareCode: clearShareCode,
+    shareUrl: shareUrl,
     getSessionToken: getSessionToken,
     setSession: setSession,
     getMe: getMe,

@@ -127,6 +127,15 @@ window.PedigreeChart = (function () {
       var r = svg.getBoundingClientRect();
       zoomAt(1 / 1.25, r.width / 2, r.height / 2);
     };
+    this.centerOn = function (box) {
+      if (!box || !box.width) return;
+      var r = svg.getBoundingClientRect();
+      var cx = box.x + box.width / 2;
+      var cy = box.y + box.height / 2;
+      tx = r.width / 2 - cx * s;
+      ty = r.height / 2 - cy * s;
+      apply();
+    };
     apply();
   }
 

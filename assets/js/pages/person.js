@@ -148,9 +148,15 @@ window.FamilyTreePerson = (function () {
         '<a class="btn btn--primary" href="tree.html?id=' +
         person.id +
         '&view=pedigree">\uD83C\uDF33 Tree</a>' +
+        '<button class="btn" type="button" id="btnRelated">' +
+        (relatedLabel()) +
+        '</button>' +
+        '<button class="btn" type="button" id="btnShare">Share</button>' +
         '<button class="btn" type="button" id="btnPhoto">\uD83D\uDCF7 Photo</button>' +
         '<button class="btn" type="button" id="btnEdit">\u270E Edit</button>' +
         '<button class="btn" type="button" id="btnMore">\u22EF</button></div>';
+      U.$('#btnRelated').onclick = function () { openRelated(); };
+      U.$('#btnShare').onclick = function () { U.copyPageLink(U.$('#btnShare')); };
       U.$('#btnEdit').onclick = editPerson;
       U.$('#btnMore').onclick = moreMenu;
       U.$('#btnPhoto').onclick = function () {
@@ -160,6 +166,86 @@ window.FamilyTreePerson = (function () {
           onDone: function () { reload(); }
         });
       };
+    }
+
+    function relatedLabel() {
+      var me = A.getMe();
+      if (me && me.selfPersonId && me.selfPersonId !== p().id) return 'How am I related?';
+      return 'Related to\u2026';
+    }
+
+    function openRelated(fromId) {
+      var person = p();
+      var me = A.getMe();
+      var start = fromId || (me && me.selfPersonId && me.selfPersonId !== person.id ? me.selfPersonId : '');
+      if (!start) {
+        U.openPersonPicker('Who is ' + F.shortName(person) + ' related to?', function (x) {
+          openRelated(x.id);
+        });
+        return;
+      }
+      API.relationship(start, person.id)
+        .then(function (rel) {
+          showRelation(rel);
+        })
+        .catch(function (err) {
+          U.brief(err.message || 'Could not calculate that');
+        });
+    }
+
+    function showRelation(rel) {
+      var svg = relationSvg(rel.path || []);
+      U.openSheet(
+        'Relationship',
+        '<div class="rel-result"><div class="rel-result__term">' +
+          U.esc(rel.phrase || rel.term || 'No known relationship') +
+          '</div>' +
+          (rel.description ? '<p class="muted">' + U.esc(rel.description) + '</p>' : '') +
+          '</div>' +
+          svg +
+          '<button class="btn" type="button" id="relOther">Compare with someone else</button>',
+        null,
+        function (root) {
+          U.$('#relOther', root).onclick = function () {
+            U.closeSheet();
+            U.openPersonPicker('Compare ' + F.shortName(p()) + ' with\u2026', function (x) {
+              openRelated(x.id);
+            });
+          };
+        }
+      );
+    }
+
+    function relationSvg(path) {
+      var layout = window.Kinship.layoutPath(path);
+      if (!layout.nodes.length) return '';
+      var b = layout.bbox;
+      var pad = 8;
+      var parts = layout.edges.map(function (e) {
+        var x1 = e.from.x + e.from.w;
+        var y1 = e.from.y + e.from.h / 2;
+        var x2 = e.to.x;
+        var y2 = e.to.y + e.to.h / 2;
+        return '<path d="M' + x1 + ',' + y1 + ' H' + x2 + '" class="edge" />';
+      });
+      layout.nodes.forEach(function (n) {
+        var person = n.person || {};
+        var given = String(person.givenNames || '').split(/\s+/)[0] || '';
+        var raw = (given + ' ' + (person.surname || '')).trim();
+        if (raw.length > 16) raw = raw.slice(0, 15) + '\u2026';
+        var name = U.esc(raw);
+        parts.push(
+          '<g class="node node--' + U.esc(person.sex || 'U') + '" transform="translate(' + n.x + ',' + n.y + ')">' +
+          '<a href="person.html?id=' + U.esc(n.id) + '">' +
+          '<rect width="' + n.w + '" height="' + n.h + '" rx="10" />' +
+          '<text class="n-name" x="' + (n.w / 2) + '" y="20" text-anchor="middle">' + name + '</text>' +
+          '<text class="n-years" x="' + (n.w / 2) + '" y="36" text-anchor="middle">' + U.esc(F.lifespan(person)) + '</text>' +
+          '</a></g>'
+        );
+      });
+      var w = Math.max(280, b.width + pad * 2);
+      return '<div class="rel-chart"><svg viewBox="' + (-pad) + ' ' + (-pad) + ' ' + (b.width + pad * 2) + ' ' + (b.height + pad * 2) +
+        '" width="' + w + '" height="78" role="img" aria-label="Relationship path">' + parts.join('') + '</svg></div>';
     }
 
     function editPerson() {
@@ -576,8 +662,15 @@ window.FamilyTreePerson = (function () {
       var rows = (state.events || []).map(function (e) {
         return { sort: String(e.dateSort || ''), kind: 'event', event: e };
       });
+      (state.families || []).forEach(function (f) {
+        if (!f.marriage) return;
+        var already = rows.some(function (row) {
+          return row.kind === 'event' && String(row.event.id) === String(f.marriage.id);
+        });
+        if (already) return;
+        rows.push({ sort: String(f.marriage.dateSort || ''), kind: 'event', event: f.marriage });
+      });
       (state.media || []).forEach(function (m) {
-        if (!m.dateSort && !m.dateText) return;
         rows.push({ sort: String(m.dateSort || ''), kind: 'media', media: m });
       });
       rows.sort(function (a, b) {
@@ -609,7 +702,9 @@ window.FamilyTreePerson = (function () {
                     U.esc(F.kindLabel(m.kind)) +
                     (m.dateText ? ' \u00b7 ' + U.esc(m.dateText) : '') +
                     (m.placeText ? ' \u00b7 ' + U.esc(m.placeText) : '') +
-                    '</div></span></li>'
+                    '</div></span>' +
+                    (m.url ? '<img class="tl__thumb" src="' + U.esc(m.url) + '" alt="" />' : '<span></span>') +
+                    '</li>'
                   );
                 }
                 var e = row.event;
@@ -657,6 +752,15 @@ window.FamilyTreePerson = (function () {
       var ev = (state.events || []).filter(function (e) {
         return String(e.id) === String(eventId);
       })[0];
+      if (!ev) {
+        (state.families || []).some(function (f) {
+          if (f.marriage && String(f.marriage.id) === String(eventId)) {
+            ev = f.marriage;
+            return true;
+          }
+          return false;
+        });
+      }
       if (!ev) return;
       if (!U.requireContributor()) return;
       U.openSheet(

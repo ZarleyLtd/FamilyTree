@@ -602,12 +602,70 @@ async function stats(pg: Client, body: Record<string, unknown>) {
     GROUP BY surname
     ORDER BY count DESC, surname
   `;
+  const longest = await pg.queryObject<Record<string, unknown>>`
+    SELECT id, given_names, surname, birth_year, death_year,
+           (death_year - birth_year)::int AS years
+    FROM familytree.persons
+    WHERE tree_id = ${tree.id}::uuid AND deleted_at IS NULL
+      AND birth_year IS NOT NULL AND death_year IS NOT NULL
+      AND death_year >= birth_year
+    ORDER BY years DESC, surname
+    LIMIT 1
+  `;
+  const oldest = await pg.queryObject<Record<string, unknown>>`
+    SELECT id, given_names, surname, birth_year
+    FROM familytree.persons
+    WHERE tree_id = ${tree.id}::uuid AND deleted_at IS NULL
+      AND birth_year IS NOT NULL
+      AND death_year IS NULL
+      AND is_living IS DISTINCT FROM false
+    ORDER BY birth_year ASC
+    LIMIT 1
+  `;
+  const names = await pg.queryObject<{ name: string; count: number }>`
+    SELECT split_part(given_names, ' ', 1) AS name, count(*)::int AS count
+    FROM familytree.persons
+    WHERE tree_id = ${tree.id}::uuid AND deleted_at IS NULL AND given_names <> ''
+    GROUP BY 1
+    ORDER BY count DESC, name
+    LIMIT 6
+  `;
+  const quality = await pg.queryObject<{ photos: number; missing_birth: number }>`
+    SELECT
+      count(*) FILTER (WHERE profile_media_id IS NOT NULL)::int AS photos,
+      count(*) FILTER (WHERE birth_year IS NULL)::int AS missing_birth
+    FROM familytree.persons
+    WHERE tree_id = ${tree.id}::uuid AND deleted_at IS NULL
+  `;
+  const longRow = longest.rows[0];
+  const oldRow = oldest.rows[0];
   return ok({
     persons: asNum(persons.rows[0]?.n),
     living: asNum(persons.rows[0]?.living),
     families: asNum(fam.rows[0]?.n),
     media: asNum(media.rows[0]?.n),
     surnames: surnames.rows.map((s) => ({ surname: s.surname, count: asNum(s.count) })),
+    withPhoto: asNum(quality.rows[0]?.photos),
+    missingBirth: asNum(quality.rows[0]?.missing_birth),
+    longestLived: longRow
+      ? {
+        id: longRow.id,
+        givenNames: longRow.given_names,
+        surname: longRow.surname,
+        birthYear: asNum(longRow.birth_year),
+        deathYear: asNum(longRow.death_year),
+        years: asNum(longRow.years),
+      }
+      : null,
+    oldestLiving: oldRow
+      ? {
+        id: oldRow.id,
+        givenNames: oldRow.given_names,
+        surname: oldRow.surname,
+        birthYear: asNum(oldRow.birth_year),
+      }
+      : null,
+    commonNames: names.rows.map((n) => ({ name: n.name, count: asNum(n.count) })),
   });
 }
 
@@ -736,6 +794,16 @@ async function handle(req: Request) {
         return await asMut(pg, body, M.storageUsage);
       case "getPedigree":
         return await asRead(pg, body, G.getPedigree);
+      case "getDescendants":
+        return await asRead(pg, body, G.getDescendants);
+      case "getHourglass":
+        return await asRead(pg, body, G.getHourglass);
+      case "relationship":
+        return await asRead(pg, body, G.relationship);
+      case "timeline":
+        return await asRead(pg, body, G.getTimeline);
+      case "onThisDay":
+        return await asRead(pg, body, G.onThisDay);
       case "createPerson":
         return await asMut(pg, body, G.createPerson);
       case "updatePerson":

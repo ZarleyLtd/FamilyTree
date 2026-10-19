@@ -18,7 +18,8 @@ window.FamilyTreePeople = (function () {
 
     var filter = qs('surname') ? 'surname:' + qs('surname') : 'all';
     var sort = 'name';
-    var q = '';
+    var q = qs('q') || '';
+    var mode = 'people';
     var all = [];
 
     API.lookupTree(A.getShareCode())
@@ -43,15 +44,27 @@ window.FamilyTreePeople = (function () {
         '<div class="people-toolbar">' +
         '<div class="search"><span class="ico">\uD83D\uDD0D</span><input type="search" id="q" placeholder="Search by name, nickname or year" autocomplete="off" /></div>' +
         '<div class="chip-row" id="filters"></div>' +
-        '<div class="sort-row"><span id="count"></span><span>Sort: <button class="btn btn--sm btn--ghost" type="button" id="sortBtn">Surname</button></span></div>' +
+        '<div class="sort-row"><span id="count"></span><span>Sort: <button class="btn btn--sm btn--ghost" type="button" id="sortBtn">Surname</button> <button class="btn btn--sm btn--ghost" type="button" id="indexBtn">Surnames</button></span></div>' +
         '</div>' +
         '<div class="people-layout">' +
         '<div class="card" id="list" style="padding-top:.2rem;padding-bottom:.2rem"></div>' +
         '<nav class="alpha-index" id="alpha" aria-label="Jump to letter"></nav>' +
         '</div>' +
         '<button class="fab" id="fabAdd" aria-label="Add person" title="Add person">+</button>';
+      U.$('#q').value = q;
       U.$('#q').addEventListener('input', function (e) {
         q = e.target.value.trim();
+        render();
+      });
+      U.$('#indexBtn').addEventListener('click', function () {
+        mode = mode === 'surnames' ? 'people' : 'surnames';
+        render();
+      });
+      U.$('#list').addEventListener('click', function (e) {
+        var row = e.target.closest('[data-surname]');
+        if (!row) return;
+        filter = 'surname:' + row.getAttribute('data-surname');
+        mode = 'people';
         render();
       });
       U.$('#filters').addEventListener('click', function (e) {
@@ -119,6 +132,21 @@ window.FamilyTreePeople = (function () {
       return list;
     }
 
+    function surnameGroups() {
+      var map = {};
+      all.forEach(function (p) {
+        var names = {};
+        if (p.surname) names[p.surname] = 1;
+        if (p.birthSurname && p.birthSurname !== p.surname) names[p.birthSurname] = 1;
+        Object.keys(names).forEach(function (name) {
+          var letter = name[0].toUpperCase();
+          var bucket = map[letter] || (map[letter] = {});
+          bucket[name] = (bucket[name] || 0) + 1;
+        });
+      });
+      return map;
+    }
+
     function render() {
       var filters = [
         { id: 'all', label: 'All' },
@@ -147,8 +175,29 @@ window.FamilyTreePeople = (function () {
         })
         .join('');
       var list = filtered();
-      U.$('#count').textContent = list.length + ' of ' + all.length + ' people';
+      U.$('#count').textContent = mode === 'surnames'
+        ? surnames().length + ' surnames'
+        : list.length + ' of ' + all.length + ' people';
       U.$('#sortBtn').textContent = sort === 'name' ? 'Surname' : 'Birth year';
+      U.$('#indexBtn').textContent = mode === 'surnames' ? 'People' : 'Surnames';
+      if (mode === 'surnames') {
+        var groups = surnameGroups();
+        var letters = Object.keys(groups).sort();
+        var indexHtml = '<div class="surname-index">';
+        if (!letters.length) indexHtml += '<p class="empty">No surnames yet.</p>';
+        letters.forEach(function (L) {
+          indexHtml += '<h3 id="S' + L + '">' + L + '</h3>';
+          Object.keys(groups[L]).sort().forEach(function (name) {
+            indexHtml += '<button type="button" class="surname-index__row" data-surname="' + U.esc(name) + '"><span>' +
+              U.esc(name) + '</span><span class="muted">' + groups[L][name] + '</span></button>';
+          });
+        });
+        U.$('#list').innerHTML = indexHtml + '</div>';
+        U.$('#alpha').innerHTML = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(function (L) {
+          return groups[L] ? '<a href="#S' + L + '">' + L + '</a>' : '<span class="muted">' + L + '</span>';
+        }).join('');
+        return;
+      }
       var html = '';
       if (!list.length) html = '<p class="empty">No one matches. Add someone with the + button.</p>';
       else if (sort === 'name') {

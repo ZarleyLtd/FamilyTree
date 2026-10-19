@@ -2,6 +2,7 @@
  * Person / family / event helpers for familytree-api.
  */
 import { Client } from "https://deno.land/x/postgres@v0.19.3/mod.ts";
+import { phrase, relate, type KinGraph, type KinPerson } from "./kinship.ts";
 
 export function statusErr(message: string, status: number) {
   const err = new Error(message) as Error & { status?: number };
@@ -412,7 +413,10 @@ async function loadFamilyBundle(
     marriage: m
       ? {
         id: m.id,
+        type: "marriage",
         dateText: m.date_text,
+        dateSort: isoDate(m.date_sort),
+        dateQualifier: m.date_qualifier,
         placeText: m.place_text,
         description: m.description,
       }
@@ -1142,48 +1146,61 @@ export async function setSelfPerson(
   return { ok: true, selfPersonId: personId };
 }
 
-export async function getPedigree(
-  pg: Client,
-  tree: Record<string, unknown>,
-  body: Record<string, unknown>,
-) {
-  const focusId = String(body.focusId || body.id || "");
-  if (!focusId) throw statusErr("focusId is required", 400);
-  const gens = Math.max(2, Math.min(8, Number(body.generations) || 4));
-  const focus = await loadPerson(pg, String(tree.id), focusId);
-  if (!focus) throw statusErr("Person not found", 404);
+type TreeIndex = {
+  personById: Map<string, Record<string, unknown>>;
+  famById: Map<string, Record<string, unknown>>;
+  children: Record<string, unknown>[];
+  byChild: Map<string, Record<string, unknown>[]>;
+  byPartner: Map<string, string[]>;
+};
+
+async function loadIndex(pg: Client, treeId: string): Promise<TreeIndex> {
   const persons = await pg.queryObject<Record<string, unknown>>`
     SELECT p.*, med.public_url AS thumb_url
     FROM familytree.persons p
     LEFT JOIN familytree.media med
       ON med.id = p.profile_media_id AND med.deleted_at IS NULL
-    WHERE p.tree_id = ${tree.id}::uuid AND p.deleted_at IS NULL
+    WHERE p.tree_id = ${treeId}::uuid AND p.deleted_at IS NULL
   `;
   const families = await pg.queryObject<Record<string, unknown>>`
-    SELECT * FROM familytree.families WHERE tree_id = ${tree.id}::uuid AND deleted_at IS NULL
+    SELECT * FROM familytree.families WHERE tree_id = ${treeId}::uuid AND deleted_at IS NULL
   `;
   const children = await pg.queryObject<Record<string, unknown>>`
-    SELECT fc.family_id, fc.child_id, fc.relation_type
+    SELECT fc.family_id, fc.child_id, fc.relation_type, fc.seq
     FROM familytree.family_children fc
     JOIN familytree.families f ON f.id = fc.family_id
-    WHERE f.tree_id = ${tree.id}::uuid AND f.deleted_at IS NULL
+    WHERE f.tree_id = ${treeId}::uuid AND f.deleted_at IS NULL
   `;
-  const byChild = new Map<string, Record<string, unknown>[]>();
-  for (const c of children.rows) {
-    const arr = byChild.get(String(c.child_id)) || [];
-    arr.push(c);
-    byChild.set(String(c.child_id), arr);
-  }
-  const famById = new Map(families.rows.map((f) => [String(f.id), f]));
   const personById = new Map(persons.rows.map((p) => [String(p.id), p]));
+  const famById = new Map(families.rows.map((f) => [String(f.id), f]));
+  const byChild = new Map<string, Record<string, unknown>[]>();
+  const byPartner = new Map<string, string[]>();
+  for (const c of children.rows) {
+    const id = String(c.child_id);
+    const arr = byChild.get(id) || [];
+    arr.push(c);
+    byChild.set(id, arr);
+  }
+  for (const f of families.rows) {
+    for (const pid of [f.partner1_id, f.partner2_id]) {
+      if (!pid) continue;
+      const id = String(pid);
+      const arr = byPartner.get(id) || [];
+      arr.push(String(f.id));
+      byPartner.set(id, arr);
+    }
+  }
+  return { personById, famById, children: children.rows, byChild, byPartner };
+}
+
+function collectAncestors(index: TreeIndex, focusId: string, gens: number) {
   const needed = new Set<string>([focusId]);
   let frontier = [focusId];
   for (let g = 0; g < gens - 1; g++) {
     const next: string[] = [];
     for (const id of frontier) {
-      const links = byChild.get(id) || [];
-      for (const link of links) {
-        const fam = famById.get(String(link.family_id));
+      for (const link of index.byChild.get(id) || []) {
+        const fam = index.famById.get(String(link.family_id));
         if (!fam) continue;
         for (const pid of [fam.partner1_id, fam.partner2_id]) {
           if (pid && !needed.has(String(pid))) {
@@ -1195,27 +1212,372 @@ export async function getPedigree(
     }
     frontier = next;
   }
+  return needed;
+}
+
+function collectDescendants(index: TreeIndex, focusId: string, gens: number) {
+  const needed = new Set<string>([focusId]);
+  let frontier = [focusId];
+  for (let g = 0; g < gens - 1; g++) {
+    const next: string[] = [];
+    for (const id of frontier) {
+      for (const fid of index.byPartner.get(id) || []) {
+        const fam = index.famById.get(fid);
+        if (!fam) continue;
+        for (const pid of [fam.partner1_id, fam.partner2_id]) {
+          if (pid) needed.add(String(pid));
+        }
+        for (const c of index.children) {
+          if (String(c.family_id) !== fid) continue;
+          const cid = String(c.child_id);
+          if (!needed.has(cid)) {
+            needed.add(cid);
+            next.push(cid);
+          }
+        }
+      }
+    }
+    frontier = next;
+  }
+  return needed;
+}
+
+function chartPayload(
+  index: TreeIndex,
+  tree: Record<string, unknown>,
+  focusId: string,
+  needed: Set<string>,
+  extra: Record<string, unknown>,
+) {
   const limit = livingAgeLimit(tree);
-  const outPersons = Array.from(needed)
-    .map((id) => personById.get(id))
+  const persons = Array.from(needed)
+    .map((id) => index.personById.get(id))
     .filter(Boolean)
     .map((p) => personSummary(p as Record<string, unknown>, limit));
   const familyIds = new Set<string>();
   for (const id of needed) {
-    for (const link of byChild.get(id) || []) familyIds.add(String(link.family_id));
+    for (const link of index.byChild.get(id) || []) familyIds.add(String(link.family_id));
+    for (const fid of index.byPartner.get(id) || []) familyIds.add(fid);
   }
-  const outFamilies = Array.from(familyIds).map((fid) => {
-    const f = famById.get(fid)!;
-    const kids = children.rows.filter((c) => String(c.family_id) === fid).map((c) => ({
-      id: c.child_id,
-      relationType: c.relation_type,
-    }));
+  const families = Array.from(familyIds).map((fid) => {
+    const f = index.famById.get(fid)!;
+    const kids = index.children
+      .filter((c) => String(c.family_id) === fid)
+      .sort((a, b) => (Number(a.seq) || 0) - (Number(b.seq) || 0))
+      .map((c) => ({
+        id: c.child_id,
+        relationType: c.relation_type,
+        seq: Number(c.seq) || 0,
+      }));
     return {
       id: f.id,
       partner1Id: f.partner1_id,
       partner2Id: f.partner2_id,
+      relationshipType: f.relationship_type,
       children: kids,
     };
   });
-  return { focusId, generations: gens, persons: outPersons, families: outFamilies };
+  return { focusId, persons, families, ...extra };
+}
+
+function kinGraph(index: TreeIndex, limit: number): KinGraph {
+  const parents = new Map<string, { fatherId: string | null; motherId: string | null }>();
+  const partners = new Map<string, string[]>();
+  for (const f of index.famById.values()) {
+    const p1 = f.partner1_id ? String(f.partner1_id) : null;
+    const p2 = f.partner2_id ? String(f.partner2_id) : null;
+    if (p1 && p2) {
+      partners.set(p1, (partners.get(p1) || []).concat(p2));
+      partners.set(p2, (partners.get(p2) || []).concat(p1));
+    }
+    const kids = index.children.filter((c) => String(c.family_id) === String(f.id));
+    for (const kid of kids) {
+      const cid = String(kid.child_id);
+      const cur = parents.get(cid) || { fatherId: null, motherId: null };
+      for (const pid of [p1, p2]) {
+        if (!pid) continue;
+        const row = index.personById.get(pid);
+        if (!row) continue;
+        const sex = String(row.sex || "U");
+        if (sex === "F" && !cur.motherId) cur.motherId = pid;
+        else if (sex === "M" && !cur.fatherId) cur.fatherId = pid;
+        else if (!cur.fatherId) cur.fatherId = pid;
+        else if (!cur.motherId) cur.motherId = pid;
+      }
+      parents.set(cid, cur);
+    }
+  }
+  return {
+    person(id: string): KinPerson | null {
+      const row = index.personById.get(id);
+      if (!row) return null;
+      const summary = personSummary(row, limit);
+      return {
+        id: String(summary.id),
+        sex: String(summary.sex || "U"),
+        givenNames: String(summary.givenNames || ""),
+        surname: String(summary.surname || ""),
+        birthSurname: summary.birthSurname ? String(summary.birthSurname) : null,
+      };
+    },
+    parentsOf(id: string) {
+      return parents.get(id) || { fatherId: null, motherId: null };
+    },
+    partnersOf(id: string) {
+      const seen = new Set<string>();
+      return (partners.get(id) || []).filter((pid) => {
+        if (seen.has(pid) || !index.personById.has(pid)) return false;
+        seen.add(pid);
+        return true;
+      });
+    },
+  };
+}
+
+async function requireFocus(pg: Client, tree: Record<string, unknown>, body: Record<string, unknown>) {
+  const focusId = String(body.focusId || body.id || "");
+  if (!focusId) throw statusErr("focusId is required", 400);
+  const focus = await loadPerson(pg, String(tree.id), focusId);
+  if (!focus) throw statusErr("Person not found", 404);
+  return focusId;
+}
+
+export async function getPedigree(
+  pg: Client,
+  tree: Record<string, unknown>,
+  body: Record<string, unknown>,
+) {
+  const focusId = await requireFocus(pg, tree, body);
+  const gens = Math.max(2, Math.min(8, Number(body.generations) || 4));
+  const index = await loadIndex(pg, String(tree.id));
+  return chartPayload(index, tree, focusId, collectAncestors(index, focusId, gens), { generations: gens });
+}
+
+export async function getDescendants(
+  pg: Client,
+  tree: Record<string, unknown>,
+  body: Record<string, unknown>,
+) {
+  const focusId = await requireFocus(pg, tree, body);
+  const gens = Math.max(1, Math.min(8, Number(body.generations) || 4));
+  const index = await loadIndex(pg, String(tree.id));
+  return chartPayload(index, tree, focusId, collectDescendants(index, focusId, gens), { generations: gens });
+}
+
+export async function getHourglass(
+  pg: Client,
+  tree: Record<string, unknown>,
+  body: Record<string, unknown>,
+) {
+  const focusId = await requireFocus(pg, tree, body);
+  const up = Math.max(2, Math.min(6, Number(body.up) || Number(body.generations) || 4));
+  const down = Math.max(1, Math.min(6, Number(body.down) || Number(body.generations) || 4));
+  const index = await loadIndex(pg, String(tree.id));
+  const needed = collectAncestors(index, focusId, up);
+  for (const id of collectDescendants(index, focusId, down)) needed.add(id);
+  return chartPayload(index, tree, focusId, needed, { up, down });
+}
+
+export async function relationship(
+  pg: Client,
+  tree: Record<string, unknown>,
+  body: Record<string, unknown>,
+) {
+  const fromId = String(body.fromId || "");
+  const toId = String(body.toId || "");
+  if (!fromId || !toId) throw statusErr("fromId and toId are required", 400);
+  const index = await loadIndex(pg, String(tree.id));
+  if (!index.personById.has(fromId) || !index.personById.has(toId)) {
+    throw statusErr("Person not found", 404);
+  }
+  const limit = livingAgeLimit(tree);
+  const graph = kinGraph(index, limit);
+  const rel = relate(fromId, toId, graph);
+  const summaries = (ids: string[]) =>
+    ids
+      .map((id) => index.personById.get(id))
+      .filter(Boolean)
+      .map((row) => personSummary(row as Record<string, unknown>, limit));
+  return {
+    fromId,
+    toId,
+    term: rel.term,
+    phrase: phrase(graph.person(fromId), graph.person(toId), rel),
+    same: !!rel.same,
+    unrelated: !!rel.unrelated,
+    description: rel.description,
+    path: summaries(rel.path),
+    commonAncestors: summaries(rel.commonAncestorIds),
+  };
+}
+
+export async function getTimeline(
+  pg: Client,
+  tree: Record<string, unknown>,
+  body: Record<string, unknown>,
+) {
+  const personId = String(body.personId || body.id || "");
+  if (!personId) throw statusErr("personId is required", 400);
+  const person = await loadPerson(pg, String(tree.id), personId);
+  if (!person) throw statusErr("Person not found", 404);
+  const events = await pg.queryObject<Record<string, unknown>>`
+    SELECT e.* FROM familytree.events e
+    WHERE e.deleted_at IS NULL AND e.tree_id = ${tree.id}::uuid
+      AND (
+        e.person_id = ${personId}::uuid
+        OR e.family_id IN (
+          SELECT id FROM familytree.families
+          WHERE deleted_at IS NULL
+            AND (partner1_id = ${personId}::uuid OR partner2_id = ${personId}::uuid)
+        )
+      )
+    ORDER BY e.date_sort NULLS LAST, e.created_at
+  `;
+  const media = await pg.queryObject<Record<string, unknown>>`
+    SELECT m.id, m.public_url, m.kind, m.title, m.caption, m.date_text, m.date_sort, m.date_qualifier, m.place_text
+    FROM familytree.media m
+    WHERE m.tree_id = ${tree.id}::uuid AND m.deleted_at IS NULL
+      AND EXISTS (
+        SELECT 1 FROM familytree.media_links ml
+        WHERE ml.media_id = m.id AND ml.target_type = 'person' AND ml.target_id = ${personId}::uuid
+      )
+    ORDER BY m.date_sort NULLS LAST, m.created_at
+  `;
+  const items: Record<string, unknown>[] = [];
+  for (const e of events.rows) {
+    items.push({
+      kind: "event",
+      id: e.id,
+      type: e.type,
+      title: e.title,
+      dateText: e.date_text,
+      dateSort: isoDate(e.date_sort),
+      dateQualifier: e.date_qualifier,
+      placeText: e.place_text,
+      description: e.description,
+    });
+  }
+  for (const m of media.rows) {
+    items.push({
+      kind: "media",
+      id: m.id,
+      mediaKind: m.kind,
+      title: m.title,
+      caption: m.caption,
+      url: m.public_url,
+      dateText: m.date_text,
+      dateSort: isoDate(m.date_sort),
+      dateQualifier: m.date_qualifier,
+      placeText: m.place_text,
+    });
+  }
+  items.sort((a, b) => {
+    const as = String(a.dateSort || "");
+    const bs = String(b.dateSort || "");
+    if (as && !bs) return -1;
+    if (!as && bs) return 1;
+    if (as !== bs) return as < bs ? -1 : 1;
+    return String(a.kind) === "event" ? -1 : 1;
+  });
+  return {
+    person: personSummary(person, livingAgeLimit(tree)),
+    items,
+  };
+}
+
+export async function onThisDay(
+  pg: Client,
+  tree: Record<string, unknown>,
+  body: Record<string, unknown>,
+) {
+  const now = new Date();
+  const month = Math.min(12, Math.max(1, Number(body.month) || (now.getUTCMonth() + 1)));
+  const day = Math.min(31, Math.max(1, Number(body.day) || now.getUTCDate()));
+  const events = await pg.queryObject<Record<string, unknown>>`
+    SELECT e.id, e.type, e.title, e.date_text, e.date_sort, e.place_text,
+           p.id AS person_id, p.given_names, p.surname, p.sex, p.birth_year, p.death_year, p.is_living
+    FROM familytree.events e
+    JOIN familytree.persons p ON p.id = e.person_id AND p.deleted_at IS NULL
+    WHERE e.tree_id = ${tree.id}::uuid AND e.deleted_at IS NULL
+      AND e.date_qualifier = 'exact' AND e.date_sort IS NOT NULL
+      AND EXTRACT(MONTH FROM e.date_sort)::int = ${month}
+      AND EXTRACT(DAY FROM e.date_sort)::int = ${day}
+      AND coalesce(p.privacy, 'normal') <> 'private'
+  `;
+  const unions = await pg.queryObject<Record<string, unknown>>`
+    SELECT e.id, e.type, e.title, e.date_text, e.date_sort, e.place_text,
+           p1.id AS id1, p1.given_names AS g1, p1.surname AS s1,
+           p2.id AS id2, p2.given_names AS g2, p2.surname AS s2
+    FROM familytree.events e
+    JOIN familytree.families f ON f.id = e.family_id AND f.deleted_at IS NULL
+    LEFT JOIN familytree.persons p1 ON p1.id = f.partner1_id AND p1.deleted_at IS NULL
+    LEFT JOIN familytree.persons p2 ON p2.id = f.partner2_id AND p2.deleted_at IS NULL
+    WHERE e.tree_id = ${tree.id}::uuid AND e.deleted_at IS NULL
+      AND e.date_qualifier = 'exact' AND e.date_sort IS NOT NULL
+      AND EXTRACT(MONTH FROM e.date_sort)::int = ${month}
+      AND EXTRACT(DAY FROM e.date_sort)::int = ${day}
+  `;
+  const photos = await pg.queryObject<Record<string, unknown>>`
+    SELECT m.id, m.title, m.kind, m.date_text, m.date_sort, m.public_url
+    FROM familytree.media m
+    WHERE m.tree_id = ${tree.id}::uuid AND m.deleted_at IS NULL
+      AND m.date_qualifier = 'exact' AND m.date_sort IS NOT NULL
+      AND EXTRACT(MONTH FROM m.date_sort)::int = ${month}
+      AND EXTRACT(DAY FROM m.date_sort)::int = ${day}
+  `;
+  const yearOf = (v: unknown) => {
+    const s = isoDate(v);
+    return s ? Number(s.slice(0, 4)) : null;
+  };
+  const thisYear = now.getUTCFullYear();
+  const items: Record<string, unknown>[] = [];
+  for (const e of events.rows) {
+    const year = yearOf(e.date_sort);
+    items.push({
+      kind: "event",
+      id: e.id,
+      type: e.type,
+      title: e.title,
+      dateText: e.date_text,
+      placeText: e.place_text,
+      year,
+      yearsAgo: year ? thisYear - year : null,
+      personId: e.person_id,
+      givenNames: e.given_names,
+      surname: e.surname,
+    });
+  }
+  for (const e of unions.rows) {
+    const year = yearOf(e.date_sort);
+    const names = [[e.g1, e.s1].filter(Boolean).join(" "), [e.g2, e.s2].filter(Boolean).join(" ")]
+      .filter(Boolean)
+      .join(" and ");
+    items.push({
+      kind: "event",
+      id: e.id,
+      type: e.type,
+      title: e.title,
+      dateText: e.date_text,
+      placeText: e.place_text,
+      year,
+      yearsAgo: year ? thisYear - year : null,
+      personId: e.id1 || e.id2,
+      label: names,
+    });
+  }
+  for (const m of photos.rows) {
+    const year = yearOf(m.date_sort);
+    items.push({
+      kind: "media",
+      id: m.id,
+      mediaKind: m.kind,
+      title: m.title,
+      url: m.public_url,
+      dateText: m.date_text,
+      year,
+      yearsAgo: year ? thisYear - year : null,
+    });
+  }
+  items.sort((a, b) => Number(b.yearsAgo || 0) - Number(a.yearsAgo || 0));
+  return { month, day, items: items.slice(0, 12) };
 }
