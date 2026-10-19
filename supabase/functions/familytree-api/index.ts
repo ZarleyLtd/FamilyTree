@@ -12,6 +12,7 @@
 import { Client } from "https://deno.land/x/postgres@v0.19.3/mod.ts";
 import bcrypt from "https://esm.sh/bcryptjs@2.4.3";
 import * as G from "./genealogy.ts";
+import * as M from "./media.ts";
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const SESSION_DAYS = 90;
@@ -714,7 +715,25 @@ async function handle(req: Request) {
       case "listPersons":
         return await asRead(pg, body, G.listPersons);
       case "getPerson":
-        return await asRead(pg, body, G.getPerson);
+        return await asRead(pg, body, async (client, tree, b) => {
+          const detail = await G.getPerson(client, tree, b) as Record<string, unknown>;
+          detail.media = await M.mediaForPerson(client, tree, String(b.id || ""));
+          return detail;
+        });
+      case "listMedia":
+        return await asRead(pg, body, M.listMedia);
+      case "uploadMedia":
+        return await asMut(pg, body, M.uploadMedia);
+      case "updateMedia":
+        return await asMut(pg, body, M.updateMedia);
+      case "deleteMedia":
+        return await asMut(pg, body, M.deleteMedia);
+      case "linkMedia":
+        return await asMut(pg, body, M.linkMedia);
+      case "unlinkMedia":
+        return await asMut(pg, body, M.unlinkMedia);
+      case "storageUsage":
+        return await asMut(pg, body, M.storageUsage);
       case "getPedigree":
         return await asRead(pg, body, G.getPedigree);
       case "createPerson":

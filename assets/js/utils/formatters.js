@@ -77,6 +77,37 @@
     return parts.join(' \u00b7 ');
   }
 
+  var MEDIA_KINDS = [
+    ['photo', 'Photo', 'Photos', '\uD83D\uDDBC\uFE0F'],
+    ['portrait', 'Portrait', 'Portraits', '\uD83D\uDC64'],
+    ['document', 'Document', 'Documents', '\uD83D\uDCDC'],
+    ['census', 'Census', 'Census records', '\uD83D\uDCF0'],
+    ['certificate', 'Certificate', 'Certificates', '\uD83D\uDCC4'],
+    ['grave', 'Grave', 'Graves', '\uD83E\uDEA6'],
+    ['homestead', 'Homestead', 'Homesteads', '\uD83C\uDFE0'],
+    ['map', 'Map', 'Maps', '\uD83D\uDDFA\uFE0F'],
+    ['other', 'Other', 'Other', '\uD83D\uDCCE']
+  ];
+
+  function kindMeta(kind) {
+    for (var i = 0; i < MEDIA_KINDS.length; i++) {
+      if (MEDIA_KINDS[i][0] === kind) return MEDIA_KINDS[i];
+    }
+    return MEDIA_KINDS[MEDIA_KINDS.length - 1];
+  }
+
+  function kindLabel(kind) {
+    return kindMeta(kind)[1];
+  }
+
+  function kindPlural(kind) {
+    return kindMeta(kind)[2];
+  }
+
+  function kindIcon(kind) {
+    return kindMeta(kind)[3];
+  }
+
   function eventLabel(type) {
     var map = {
       birth: 'Born', baptism: 'Baptised', marriage: 'Married', divorce: 'Divorced',
@@ -96,6 +127,10 @@
     shortName: shortName,
     lifespan: lifespan,
     lifeLine: lifeLine,
-    eventLabel: eventLabel
+    eventLabel: eventLabel,
+    mediaKinds: MEDIA_KINDS,
+    kindLabel: kindLabel,
+    kindPlural: kindPlural,
+    kindIcon: kindIcon
   };
 })(typeof window !== 'undefined' ? window : this);

@@ -54,11 +54,12 @@ Living-person detail is only returned when `treeCode` is valid (which is every n
 
 | Action | Method | Purpose |
 |--------|--------|---------|
-| `uploadMedia` | POST | `{ base64, mimeType, kind, title?, caption?, dateText?, placeText?, links?: [{targetType,targetId,isPrimary}] }` → `{ media }`; JPEG/PNG/WebP, max 150 KB |
-| `updateMedia` | POST | `{ id, patch }` |
-| `deleteMedia` | POST | `{ id }` (soft) |
-| `linkMedia` / `unlinkMedia` | POST | `{ mediaId, targetType, targetId, isPrimary?, region? }` |
-| `listMedia` | GET | `{ personId?, kind?, decade?, limit?, offset? }` |
+| `uploadMedia` | POST | `{ base64, mimeType, kind, title?, caption?, dateText?, placeText?, width?, height?, links?: [{targetType,targetId,isPrimary,region?}] }` → `{ media }`; JPEG/PNG/WebP, max 150 KB. Stored at `trees/<tree_id>/media/<uuid>.jpg` |
+| `updateMedia` | POST | `{ id, patch }` title, caption, kind, dateText, placeText |
+| `deleteMedia` | POST | `{ id }` (soft; file removed on admin purge) |
+| `linkMedia` / `unlinkMedia` | POST | `{ mediaId, targetType, targetId, isPrimary?, region? }` — `region` is `{x,y,w,h}` fractions, or `null` to clear a face box. `isPrimary` on a person sets `profile_media_id` |
+| `listMedia` | GET | `{ personId?, kind?, decade?, q?, limit?, offset? }` → `{ media, total }` |
+| `storageUsage` | POST | admin session → `{ count, bytes, quotaBytes, note }` |
 
 ## Actions – Phase 3
 
@@ -87,7 +88,7 @@ Living-person detail is only returned when `treeCode` is valid (which is every n
 | `findDuplicates` | GET | |
 | `mergePersons` | POST | `{ keepId, mergeId }` |
 | `purgeDeleted` | POST | `{ adminCode }` |
-| `storageUsage` | GET | `{ adminCode }` |
+| `storageUsage` | POST | admin session. Shipped in Phase 2; `{ count, bytes, quotaBytes }` |
 
 ## Actions – Phase 5
 

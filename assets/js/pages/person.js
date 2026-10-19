@@ -77,6 +77,8 @@ window.FamilyTreePerson = (function () {
     }
 
     function renderAll() {
+      var currentTab = U.$('#tabs button[aria-selected="true"]');
+      var activeTab = currentTab ? currentTab.getAttribute('data-tab') : 'family';
       var person = p();
       document.title = F.fullName(person) + ' · Family Tree';
       U.renderShell({
@@ -116,6 +118,10 @@ window.FamilyTreePerson = (function () {
           s.classList.toggle('is-active', s.dataset.tab === b.dataset.tab);
         });
       });
+      if (activeTab && activeTab !== 'family') {
+        var tabBtn = U.$('#tabs button[data-tab="' + activeTab + '"]');
+        if (tabBtn) tabBtn.click();
+      }
     }
 
     function renderHero() {
@@ -142,10 +148,18 @@ window.FamilyTreePerson = (function () {
         '<a class="btn btn--primary" href="tree.html?id=' +
         person.id +
         '&view=pedigree">\uD83C\uDF33 Tree</a>' +
+        '<button class="btn" type="button" id="btnPhoto">\uD83D\uDCF7 Photo</button>' +
         '<button class="btn" type="button" id="btnEdit">\u270E Edit</button>' +
         '<button class="btn" type="button" id="btnMore">\u22EF</button></div>';
       U.$('#btnEdit').onclick = editPerson;
       U.$('#btnMore').onclick = moreMenu;
+      U.$('#btnPhoto').onclick = function () {
+        window.MediaUploader.open({
+          personIds: [person.id],
+          asProfile: !person.thumbUrl,
+          onDone: function () { reload(); }
+        });
+      };
     }
 
     function editPerson() {
@@ -261,9 +275,11 @@ window.FamilyTreePerson = (function () {
         html +=
           '<div class="fam-group"><div class="fam-group__title"><h3>' +
           (other ? (other.sex === 'M' ? 'Husband' : other.sex === 'F' ? 'Wife' : 'Partner') : 'Children') +
-          '</h3><button class="add-link" type="button" data-add="child" data-fam="' +
+          '</h3><span class="btn-row"><button class="add-link" type="button" data-add="famphoto" data-fam="' +
           f.id +
-          '">+ Add child</button></div>';
+          '">+ Photo</button><button class="add-link" type="button" data-add="child" data-fam="' +
+          f.id +
+          '">+ Add child</button></span></div>';
         if (other) html += U.personRow(other, { tag: f.marriage && f.marriage.dateText ? 'm. ' + f.marriage.dateText : '' });
         if (f.marriage && f.marriage.dateText) {
           html +=
@@ -298,6 +314,19 @@ window.FamilyTreePerson = (function () {
       var person = p();
       var par = parentPair();
       var surname = person.sex === 'F' && person.birthSurname ? person.birthSurname : person.surname;
+
+      if (kind === 'famphoto') {
+        var fam = (state.families || []).filter(function (f) { return f.id === famId; })[0];
+        var ids = [person.id];
+        if (fam && fam.partner1 && fam.partner1.id !== person.id) ids.push(fam.partner1.id);
+        if (fam && fam.partner2 && fam.partner2.id !== person.id) ids.push(fam.partner2.id);
+        window.MediaUploader.open({
+          personIds: ids,
+          extraLinks: [{ targetType: 'family', targetId: famId }],
+          onDone: function () { reload(); }
+        });
+        return;
+      }
 
       if (kind === 'parent') {
         var missingSex = !par.father ? 'M' : 'F';
@@ -543,29 +572,47 @@ window.FamilyTreePerson = (function () {
       custom: '\uD83D\uDCCC'
     };
 
-    function timelineRank(type) {
-      if (type === 'birth') return 0;
-      if (type === 'baptism') return 1;
-      if (type === 'death') return 80;
-      if (type === 'burial') return 81;
-      return 20;
-    }
-
     function renderTimeline() {
-      var evs = (state.events || []).slice().sort(function (a, b) {
-        var da = String(a.dateSort || '');
-        var db = String(b.dateSort || '');
-        if (da && !db) return -1;
-        if (!da && db) return 1;
-        if (da !== db) return da < db ? -1 : 1;
-        return timelineRank(a.type) - timelineRank(b.type);
+      var rows = (state.events || []).map(function (e) {
+        return { sort: String(e.dateSort || ''), kind: 'event', event: e };
+      });
+      (state.media || []).forEach(function (m) {
+        if (!m.dateSort && !m.dateText) return;
+        rows.push({ sort: String(m.dateSort || ''), kind: 'media', media: m });
+      });
+      rows.sort(function (a, b) {
+        if (a.sort && !b.sort) return -1;
+        if (!a.sort && b.sort) return 1;
+        if (a.sort !== b.sort) return a.sort < b.sort ? -1 : 1;
+        if (a.kind !== b.kind) return a.kind === 'event' ? -1 : 1;
+        return 0;
       });
       U.$('#timeline').innerHTML =
         '<div class="card__head"><h2>Timeline</h2><button class="add-link" type="button" id="addEvent">+ Add event</button></div>' +
-        (evs.length
+        (rows.length
           ? '<ul class="timeline">' +
-            evs
-              .map(function (e) {
+            rows
+              .map(function (row) {
+                if (row.kind === 'media') {
+                  var m = row.media;
+                  var my = m.dateSort ? String(m.dateSort).slice(0, 4) : '?';
+                  return (
+                    '<li class="tl tl--media" data-media="' +
+                    U.esc(m.id) +
+                    '"><span class="tl__year">' +
+                    my +
+                    '</span><span class="tl__dot"></span><span><div class="tl__title">' +
+                    F.kindIcon(m.kind) +
+                    ' ' +
+                    U.esc(m.title || 'Untitled') +
+                    '</div><div class="tl__meta">' +
+                    U.esc(F.kindLabel(m.kind)) +
+                    (m.dateText ? ' \u00b7 ' + U.esc(m.dateText) : '') +
+                    (m.placeText ? ' \u00b7 ' + U.esc(m.placeText) : '') +
+                    '</div></span></li>'
+                  );
+                }
+                var e = row.event;
                 var year = e.dateSort ? String(e.dateSort).slice(0, 4) : '?';
                 return (
                   '<li class="tl" data-event="' +
@@ -589,6 +636,17 @@ window.FamilyTreePerson = (function () {
           : '<p class="empty">No events yet.</p>');
       U.$('#addEvent').onclick = addEvent;
       U.$('#timeline').onclick = function (e) {
+        var mediaEl = e.target.closest('[data-media]');
+        if (mediaEl) {
+          var mid = mediaEl.getAttribute('data-media');
+          var list = state.media || [];
+          var idx = 0;
+          list.forEach(function (m, n) {
+            if (String(m.id) === String(mid)) idx = n;
+          });
+          window.Lightbox.open(list, idx, { focusPersonId: p().id, onChange: function () { reload(); } });
+          return;
+        }
         var li = e.target.closest('[data-event]');
         if (!li) return;
         editEvent(li.getAttribute('data-event'));
@@ -611,7 +669,7 @@ window.FamilyTreePerson = (function () {
           '<div class="field"><label>Details</label><textarea id="evDesc" rows="2">' +
           U.esc(ev.description || '') +
           '</textarea></div>',
-        '<button class="btn btn--danger" type="button" id="evDel">Delete</button><button class="btn" type="button" data-close>Cancel</button><button class="btn btn--primary" type="button" id="evSave">Save</button>',
+        '<button class="btn btn--danger" type="button" id="evDel">Delete</button><button class="btn" type="button" id="evPhoto">Attach photo</button><button class="btn" type="button" data-close>Cancel</button><button class="btn btn--primary" type="button" id="evSave">Save</button>',
         function (root) {
           U.$('#evSave', root).onclick = function () {
             API.updateEvent({
@@ -630,6 +688,14 @@ window.FamilyTreePerson = (function () {
               .catch(function (err) {
                 U.brief(err.message);
               });
+          };
+          U.$('#evPhoto', root).onclick = function () {
+            U.closeSheet();
+            window.MediaUploader.open({
+              personIds: [p().id],
+              extraLinks: [{ targetType: 'event', targetId: ev.id }],
+              onDone: function () { reload(); }
+            });
           };
           U.$('#evDel', root).onclick = function () {
             U.closeSheet();
@@ -689,9 +755,26 @@ window.FamilyTreePerson = (function () {
     }
 
     function renderPhotos() {
+      var list = state.media || [];
       U.$('#photos').innerHTML =
-        '<div class="card__head"><h2>Photos & documents</h2></div>' +
-        '<p class="empty">Photos arrive in Phase 2. You can still add people and dates now.</p>';
+        '<div class="card__head"><h2>Photos & documents</h2><button class="add-link" type="button" id="addPhoto">+ Add</button></div>' +
+        (list.length
+          ? '<div class="media-grid" id="photoGrid">' + list.map(window.Lightbox.tile).join('') + '</div>'
+          : '<p class="empty">No photos yet.</p>');
+      U.$('#addPhoto').onclick = function () {
+        window.MediaUploader.open({
+          personIds: [p().id],
+          asProfile: !p().thumbUrl,
+          onDone: function () { reload(); }
+        });
+      };
+      var grid = U.$('#photoGrid');
+      if (grid) {
+        window.Lightbox.bind(grid, list, {
+          focusPersonId: p().id,
+          onChange: function () { reload(); }
+        });
+      }
     }
 
     function renderNotes() {

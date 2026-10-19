@@ -309,6 +309,9 @@ window.FamilyTreeUI = (function () {
 
   function avatar(p, size) {
     var cls = 'avatar avatar--' + ((p && p.sex) || 'U') + (size ? ' avatar--' + size : '');
+    if (p && p.thumbUrl) {
+      return '<span class="' + cls + ' avatar--img" style="background-image:url(\'' + esc(p.thumbUrl) + '\')" aria-hidden="true"></span>';
+    }
     return '<span class="' + cls + '" aria-hidden="true">' + esc(F.initialsOf(p)) + '</span>';
   }
 

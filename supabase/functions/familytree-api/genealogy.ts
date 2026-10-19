@@ -178,7 +178,7 @@ export function personSummary(row: Record<string, unknown>, limit: number) {
     deathDateText: row.death_date_text || null,
     birthPlaceShort: row.birth_place_short || null,
     deathPlaceShort: row.death_place_short || null,
-    thumbUrl: null,
+    thumbUrl: row.thumb_url ? String(row.thumb_url) : null,
   };
 }
 
@@ -229,8 +229,11 @@ export async function writeLog(
 
 export async function loadPerson(pg: Client, treeId: string, id: string) {
   const r = await pg.queryObject<Record<string, unknown>>`
-    SELECT * FROM familytree.persons
-    WHERE id = ${id}::uuid AND tree_id = ${treeId}::uuid AND deleted_at IS NULL
+    SELECT p.*, m.public_url AS thumb_url
+    FROM familytree.persons p
+    LEFT JOIN familytree.media m
+      ON m.id = p.profile_media_id AND m.deleted_at IS NULL
+    WHERE p.id = ${id}::uuid AND p.tree_id = ${treeId}::uuid AND p.deleted_at IS NULL
     LIMIT 1
   `;
   return r.rows[0] || null;
@@ -313,9 +316,12 @@ export async function listPersons(
   const q = String(body.q || "").trim();
   const surname = String(body.surname || "").trim();
   const r = await pg.queryObject<Record<string, unknown>>`
-    SELECT * FROM familytree.persons
-    WHERE tree_id = ${tree.id}::uuid AND deleted_at IS NULL
-    ORDER BY surname, given_names
+    SELECT p.*, med.public_url AS thumb_url
+    FROM familytree.persons p
+    LEFT JOIN familytree.media med
+      ON med.id = p.profile_media_id AND med.deleted_at IS NULL
+    WHERE p.tree_id = ${tree.id}::uuid AND p.deleted_at IS NULL
+    ORDER BY p.surname, p.given_names
   `;
   const limitAge = livingAgeLimit(tree);
   let list = r.rows.map((row) => personSummary(row, limitAge));
@@ -425,8 +431,11 @@ export async function getPerson(
   if (!person) throw statusErr("Person not found", 404);
   const limit = livingAgeLimit(tree);
   const persons = await pg.queryObject<Record<string, unknown>>`
-    SELECT * FROM familytree.persons
-    WHERE tree_id = ${tree.id}::uuid AND deleted_at IS NULL
+    SELECT p.*, med.public_url AS thumb_url
+    FROM familytree.persons p
+    LEFT JOIN familytree.media med
+      ON med.id = p.profile_media_id AND med.deleted_at IS NULL
+    WHERE p.tree_id = ${tree.id}::uuid AND p.deleted_at IS NULL
   `;
   const personMap = new Map(persons.rows.map((p) => [String(p.id), p]));
   const events = await pg.queryObject<Record<string, unknown>>`
@@ -1144,7 +1153,11 @@ export async function getPedigree(
   const focus = await loadPerson(pg, String(tree.id), focusId);
   if (!focus) throw statusErr("Person not found", 404);
   const persons = await pg.queryObject<Record<string, unknown>>`
-    SELECT * FROM familytree.persons WHERE tree_id = ${tree.id}::uuid AND deleted_at IS NULL
+    SELECT p.*, med.public_url AS thumb_url
+    FROM familytree.persons p
+    LEFT JOIN familytree.media med
+      ON med.id = p.profile_media_id AND med.deleted_at IS NULL
+    WHERE p.tree_id = ${tree.id}::uuid AND p.deleted_at IS NULL
   `;
   const families = await pg.queryObject<Record<string, unknown>>`
     SELECT * FROM familytree.families WHERE tree_id = ${tree.id}::uuid AND deleted_at IS NULL

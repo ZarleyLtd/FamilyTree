@@ -75,6 +75,8 @@ window.FamilyTreeAdmin = (function () {
         U.esc(A.getShareCode()) +
         '</span></div></div>' +
         '<p class="muted small">Rotating codes and contributor management arrive in Phase 4. You can issue invites now.</p></section>' +
+        '<section class="card"><div class="card__head"><h2>Storage</h2></div>' +
+        '<div id="storageBox"><p class="empty">Loading\u2026</p></div></section>' +
         '<section class="card"><div class="card__head"><h2>Issue an invite</h2></div>' +
         '<p class="muted small">One-time register code, 30 days. Shown once \u2014 send it in a message.</p>' +
         '<div class="field"><label for="invLabel">Label (optional)</label><input type="text" id="invLabel" placeholder="e.g. for Siobh\u00e1n" /></div>' +
@@ -83,6 +85,38 @@ window.FamilyTreeAdmin = (function () {
         '<button class="btn btn--primary" type="button" id="invGo">Issue register invite</button></section>' +
         '</div>' +
         '<section class="card"><div class="card__head"><h2>Pending invites</h2></div><div id="invList"><p class="empty">Loading\u2026</p></div></section>';
+
+      function fmtBytes(n) {
+        n = Number(n) || 0;
+        if (n < 1024) return n + ' B';
+        if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
+        if (n < 1024 * 1024 * 1024) return (n / (1024 * 1024)).toFixed(1) + ' MB';
+        return (n / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+      }
+      API.storageUsage()
+        .then(function (usage) {
+          var bytes = Number(usage.bytes) || 0;
+          var quota = Number(usage.quotaBytes) || 1024 * 1024 * 1024;
+          var pct = Math.max(bytes ? 1 : 0, Math.min(100, (bytes / quota) * 100));
+          $('#storageBox').innerHTML =
+            '<div class="small">' +
+            fmtBytes(bytes) +
+            ' in ' +
+            (usage.count || 0) +
+            ' file' +
+            (usage.count === 1 ? '' : 's') +
+            ' \u00b7 shared project quota ' +
+            fmtBytes(quota) +
+            '</div><div class="bar"><span style="width:' +
+            pct.toFixed(2) +
+            '%"></span></div>' +
+            '<p class="muted small">' +
+            U.esc(usage.note || 'Measured against the shared Apps project quota.') +
+            '</p>';
+        })
+        .catch(function (e) {
+          $('#storageBox').innerHTML = '<p class="empty">' + U.esc(e.message) + '</p>';
+        });
 
       function loadInvites() {
         API.listInvites()

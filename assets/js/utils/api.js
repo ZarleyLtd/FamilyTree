@@ -143,6 +143,27 @@
     },
     setSelfPerson: function (personId) {
       return post('setSelfPerson', withAccess({ personId: personId }));
+    },
+    listMedia: function (params) {
+      return get('listMedia', withTree(params || {}));
+    },
+    uploadMedia: function (body) {
+      return post('uploadMedia', withAccess(body));
+    },
+    updateMedia: function (body) {
+      return post('updateMedia', withAccess(body));
+    },
+    deleteMedia: function (id) {
+      return post('deleteMedia', withAccess({ id: id }));
+    },
+    linkMedia: function (body) {
+      return post('linkMedia', withAccess(body));
+    },
+    unlinkMedia: function (body) {
+      return post('unlinkMedia', withAccess(body));
+    },
+    storageUsage: function () {
+      return post('storageUsage', withAccess({}));
     }
   };
 })(typeof window !== 'undefined' ? window : this);

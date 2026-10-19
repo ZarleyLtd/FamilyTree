@@ -1,6 +1,6 @@
 # FamilyTree – development plan
 
-_Last updated: 2026-10-19 (Phase 1 implemented)_
+_Last updated: 2026-10-19 (Phase 2 implemented)_
 
 ## 1. Goal
 
@@ -94,11 +94,11 @@ Each phase ends with: deployed Edge Function, migration applied, site live on Pa
 
 ### Phase 2 – Photos and artifacts
 
-- [ ] **Upload** from profile / gallery: pick or take photo, compress (`ImageCompress.compressToTarget`, ≈100 KB, long edge 1080), base64 → API → Storage; metadata row in `media`
-- [ ] **Kinds**: photo, portrait, document, census, certificate, grave, homestead, map, other; title, caption, fuzzy date, place
-- [ ] **Links**: attach one media item to many persons/families/events; set profile photo; optional face region tags on a photo (tap to tag person)
-- [ ] **Gallery** `gallery.html`: grid by decade / person / kind, lightbox with swipe (phone) and arrow keys (desktop), "people in this photo"
-- [ ] Storage usage shown on admin page (quota awareness for shared project)
+- [x] **Upload** from profile / gallery: pick or take photo, compress (`ImageCompress.compressToTarget`, ≈100 KB, long edge 1080), base64 → API → Storage; metadata row in `media`
+- [x] **Kinds**: photo, portrait, document, census, certificate, grave, homestead, map, other; title, caption, fuzzy date, place
+- [x] **Links**: attach one media item to many persons/families/events; set profile photo; optional face region tags on a photo (tap to tag person)
+- [x] **Gallery** `gallery.html`: grid by decade / person / kind, lightbox with swipe (phone) and arrow keys (desktop), "people in this photo"
+- [x] Storage usage shown on admin page (quota awareness for shared project)
 
 ### Phase 3 – Views and navigation
 

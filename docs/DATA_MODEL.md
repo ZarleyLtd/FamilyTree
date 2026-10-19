@@ -160,8 +160,9 @@ Index `(person_id, date_sort)`, `(family_id, date_sort)`, `(tree_id, type)`.
 | kind | text | `photo` `portrait` `document` `census` `certificate` `grave` `homestead` `map` `other` |
 | title | text null | |
 | caption | text null | |
-| date_text, date_sort, date_qualifier | | fuzzy date of the photo/document |
+| date_text, date_sort, date_end_sort, date_qualifier | | fuzzy date of the photo/document; `date_end_sort` for ranges |
 | place_id | uuid → places null | |
+| place_text | text null | free text until a place record exists |
 | uploaded_by, created_at, updated_at, deleted_at | | |
 
 ### `media_links`
