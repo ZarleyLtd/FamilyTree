@@ -543,9 +543,22 @@ window.FamilyTreePerson = (function () {
       custom: '\uD83D\uDCCC'
     };
 
+    function timelineRank(type) {
+      if (type === 'birth') return 0;
+      if (type === 'baptism') return 1;
+      if (type === 'death') return 80;
+      if (type === 'burial') return 81;
+      return 20;
+    }
+
     function renderTimeline() {
       var evs = (state.events || []).slice().sort(function (a, b) {
-        return String(a.dateSort || '') < String(b.dateSort || '') ? -1 : 1;
+        var da = String(a.dateSort || '');
+        var db = String(b.dateSort || '');
+        if (da && !db) return -1;
+        if (!da && db) return 1;
+        if (da !== db) return da < db ? -1 : 1;
+        return timelineRank(a.type) - timelineRank(b.type);
       });
       U.$('#timeline').innerHTML =
         '<div class="card__head"><h2>Timeline</h2><button class="add-link" type="button" id="addEvent">+ Add event</button></div>' +

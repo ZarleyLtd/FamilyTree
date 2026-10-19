@@ -106,16 +106,25 @@ window.FamilyTreeTree = (function () {
         '<button class="btn" type="button" id="zoomIn" aria-label="Zoom in">+</button>' +
         '<button class="btn" type="button" id="zoomOut" aria-label="Zoom out">\u2212</button>' +
         '<button class="btn" type="button" id="fit" aria-label="Fit to screen" title="Fit to screen">\u2194</button></div>' +
-        '<div class="chart-info hidden" id="info"></div></div></div>';
+        '<div class="chart-info hidden" id="info"></div>' +
+        '<div class="chart-soon hidden" id="soon" role="status"></div></div></div>';
       var svg = U.$('#chart');
       var g = U.$('#chartG');
       pz = new Chart.PanZoom(svg, g);
-      U.bindSeg(U.$('#viewSeg'), function (v) {
+      U.bindSeg(U.$('#viewSeg'), function (v, btn) {
         if (v !== 'pedigree') {
-          U.brief('That chart arrives in Phase 3');
           U.$$('#viewSeg button').forEach(function (b) {
             b.setAttribute('aria-pressed', b.dataset.value === 'pedigree' ? 'true' : 'false');
           });
+          var label = v === 'fan' ? 'Fan chart' : 'Descendants chart';
+          var soon = U.$('#soon');
+          soon.textContent = label + ' arrives in a later phase.';
+          soon.classList.remove('hidden');
+          clearTimeout(soon._hide);
+          soon._hide = setTimeout(function () {
+            soon.classList.add('hidden');
+          }, 2400);
+          U.brief(label + ' arrives later', btn, 2400);
           return;
         }
         view = v;

@@ -336,7 +336,7 @@ window.FamilyTreeUI = (function () {
         $$('button', root).forEach(function (x) {
           x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
         });
-        if (onChange) onChange(b.dataset.value);
+        if (onChange) onChange(b.dataset.value, b);
       });
     });
   }
