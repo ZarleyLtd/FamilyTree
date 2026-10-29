@@ -3,6 +3,9 @@
  */
 (function () {
   'use strict';
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  }
   if (window.ContextualHelp && typeof window.ContextualHelp.init === 'function') {
     window.ContextualHelp.init();
   }
