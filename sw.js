@@ -1,4 +1,4 @@
-var CACHE = 'familytree-shell-v1';
+var CACHE = 'familytree-shell-v2';
 var SHELL = [
   './',
   './index.html',
