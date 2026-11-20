@@ -62,7 +62,7 @@ Living-person detail is only returned when `treeCode` is valid (which is every n
 | `deleteMedia` | POST | `{ id }` (soft; file removed on admin purge) |
 | `linkMedia` / `unlinkMedia` | POST | `{ mediaId, targetType, targetId, isPrimary?, region? }` — `region` is `{x,y,w,h}` fractions, or `null` to clear a face box. `isPrimary` on a person sets `profile_media_id` |
 | `listMedia` | GET | `{ personId?, kind?, decade?, q?, limit?, offset? }` → `{ media, total }` |
-| `storageUsage` | POST | admin session → `{ count, bytes, quotaBytes, note }` |
+| `storageUsage` | POST | admin session → `{ count, bytes, appBytes, quotaBytes, note }` (`quotaBytes` = app limit, 100 MB; `appBytes` = all trees) |
 
 ## Actions – Phase 3
 
@@ -91,7 +91,7 @@ Living-person detail is only returned when `treeCode` is valid (which is every n
 | `findDuplicates` | GET | |
 | `mergePersons` | POST | `{ keepId, mergeId }` |
 | `purgeDeleted` | POST | `{ adminCode }` |
-| `storageUsage` | POST | admin session. Shipped in Phase 2; `{ count, bytes, quotaBytes }` |
+| `storageUsage` | POST | admin session. Shipped in Phase 2; `{ count, bytes, appBytes, quotaBytes }` |
 
 ## Actions – Phase 5
 

@@ -36,7 +36,7 @@ window.FamilyTreeHelpCatalog = {
   topics: {
     'chrome.back': {
       title: 'Back',
-      body: 'Returns to the people list. The person you were viewing is unchanged.'
+      body: 'Returns to the page you were on before this one, like your browser’s back button. If you arrived here from a shared link, it opens the people list instead.'
     },
     'chrome.search': {
       title: 'Find people',
@@ -192,7 +192,7 @@ window.FamilyTreeHelpCatalog = {
     },
     'person.related': {
       title: 'Relationship calculator',
-      body: 'Explains how this person is related to you (if you have marked “this is me” on your own profile) or to someone you pick. It uses the tree links, not DNA.'
+      body: 'Pick anyone in the tree to see how this person is related to them, with the path of links between the two. It uses the tree links, not DNA.'
     },
     'person.share': {
       title: 'Share this profile',
@@ -208,7 +208,7 @@ window.FamilyTreeHelpCatalog = {
     },
     'person.more': {
       title: 'More actions',
-      body: 'Extra tools for this person: jump to their ancestor chart, mark them as you (for “How am I related?”), or soft-delete them. An admin can restore a deleted person later.'
+      body: 'Extra tools for this person: jump to their ancestor chart, mark them as you, or soft-delete them. An admin can restore a deleted person later.'
     },
     'person.tabFamily': {
       title: 'Family tab',
@@ -260,7 +260,7 @@ window.FamilyTreeHelpCatalog = {
     },
     'person.familyGroup': {
       title: 'A family group',
-      body: 'One union of two partners (or one parent) and their children. The same couple is kept as a single group. Names open profiles. This help is about the grouping, not about the people in it.'
+      body: 'Parents and siblings of this person, or one of their partners with the children they had together (listed under “Children of …” and labelled son or daughter). The same couple is kept as a single group. Names open profiles. This help is about the grouping, not about the people in it.'
     },
     'person.event': {
       title: 'An event',
@@ -288,7 +288,7 @@ window.FamilyTreeHelpCatalog = {
     },
     'person.thisIsMe': {
       title: 'This is me',
-      body: 'Marks this person as you on your contributor account. “How am I related?” on other profiles then starts from here. It does not change the tree data.'
+      body: 'Marks this person as you on your contributor account. It does not change the tree data.'
     },
     'person.delete': {
       title: 'Delete person',
@@ -451,7 +451,7 @@ window.FamilyTreeHelpCatalog = {
     },
     'admin.storage': {
       title: 'Storage',
-      body: 'How much space photos use in the shared project bucket. Images are kept small on purpose. If this bar grows large, we may move the tree to its own project later.'
+      body: 'How much of this app’s 100 MB storage limit photos and documents use, across all trees. Images are kept small on purpose, so the limit holds many hundreds of photos. If the bar nears full, older or duplicate files may need tidying.'
     },
     'admin.invite': {
       title: 'Issue an invite',

@@ -344,6 +344,8 @@ html, body { overflow-x: hidden; }
 .fam-group__title { display: flex; justify-content: space-between; align-items: center; margin-bottom: .2rem; }
 .fam-group__title h3 { margin: 0; }
 .fam-union { font-size: .85rem; color: var(--muted); margin: .2rem 0 .3rem; display: flex; gap: .4rem; align-items: center; }
+.fam-children__label { font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: .5rem 0 .1rem 1.3rem; }
+.fam-children { padding-left: .6rem; border-left: 2px solid var(--line); margin-left: 1.3rem; }
 .add-link { display: inline-flex; align-items: center; gap: .3rem; font-size: .82rem; font-weight: 600; color: var(--accent); background: none; border: 1px dashed #bcd2b4; border-radius: 999px; padding: .3rem .7rem; cursor: pointer; }
 .add-link:hover { background: var(--accent-soft); }
 .fam-parent { border-bottom: 1px solid var(--line); }

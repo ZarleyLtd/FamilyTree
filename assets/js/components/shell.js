@@ -29,6 +29,23 @@ window.FamilyTreeUI = (function () {
     return Array.prototype.slice.call((root || document).querySelectorAll(sel));
   }
 
+  // Header back arrow: return to the previous view in this app; if there is
+  // none (opened from a shared link, new tab), follow the link's fallback href.
+  function goBack(e) {
+    var ref = document.referrer;
+    var sameApp = false;
+    try {
+      var r = new URL(ref);
+      sameApp = r.origin === location.origin && r.pathname.replace(/[^/]*$/, '') === location.pathname.replace(/[^/]*$/, '');
+    } catch (err) {
+      sameApp = false;
+    }
+    if (sameApp && history.length > 1) {
+      e.preventDefault();
+      history.back();
+    }
+  }
+
   function copyPageLink(anchor) {
     var url = A.shareUrl();
     function done() {
@@ -82,7 +99,7 @@ window.FamilyTreeUI = (function () {
         (opts.landing
           ? '<span class="app-header__btn" aria-hidden="true" style="visibility:hidden;pointer-events:none"></span>'
           : opts.back
-            ? '<a class="app-header__btn" href="' + esc(opts.back) + '" aria-label="Back" data-help="chrome.back">\u2190</a>'
+            ? '<a class="app-header__btn" id="backBtn" href="' + esc(opts.back) + '" aria-label="Back" data-help="chrome.back">\u2190</a>'
             : '') +
         '<div class="app-header__title">' +
         esc(opts.title || 'Family tree') +
@@ -98,6 +115,8 @@ window.FamilyTreeUI = (function () {
         (opts.landing ? '' : chip);
       var chipEl = $('#meChip');
       if (chipEl) chipEl.addEventListener('click', openAccountMenu);
+      var backEl = $('#backBtn');
+      if (backEl) backEl.addEventListener('click', goBack);
       var shareEl = $('#shareLink');
       if (shareEl) shareEl.addEventListener('click', function () { copyPageLink(shareEl); });
     }

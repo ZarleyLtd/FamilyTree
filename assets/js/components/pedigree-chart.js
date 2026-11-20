@@ -58,9 +58,19 @@ window.PedigreeChart = (function () {
       },
       { passive: false }
     );
+    // Capture the pointer only once a drag or pinch starts. Capturing on
+    // pointerdown makes desktop browsers retarget the mouse click to the <svg>,
+    // so taps on a person box never reached its click handler.
+    function capture(id) {
+      try {
+        if (!svg.hasPointerCapture(id)) svg.setPointerCapture(id);
+      } catch (err) {
+        /* pointer already released */
+      }
+    }
     svg.addEventListener('pointerdown', function (e) {
-      svg.setPointerCapture(e.pointerId);
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointers.size === 2) pointers.forEach(function (_, id) { capture(id); });
       moved = 0;
       self.dragged = false;
       if (pointers.size === 1) start = { x: e.clientX, y: e.clientY, tx: tx, ty: ty };
@@ -84,7 +94,10 @@ window.PedigreeChart = (function () {
       if (pointers.size === 1 && start) {
         var dx = e.clientX - start.x, dy = e.clientY - start.y;
         moved = Math.max(moved, Math.hypot(dx, dy));
-        if (moved > 6) self.dragged = true;
+        if (moved > 6 && !self.dragged) {
+          self.dragged = true;
+          capture(e.pointerId);
+        }
         tx = start.tx + dx;
         ty = start.ty + dy;
         apply();

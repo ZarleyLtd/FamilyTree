@@ -83,6 +83,18 @@ window.FamilyTreePerson = (function () {
       return word.charAt(0).toUpperCase() + word.slice(1);
     }
 
+    function childTag(x) {
+      var word = x.sex === 'M' ? 'son' : x.sex === 'F' ? 'daughter' : 'child';
+      var rel = x.relationType && x.relationType !== 'birth' ? x.relationType : '';
+      if (rel) return rel.charAt(0).toUpperCase() + rel.slice(1) + ' ' + word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    }
+
+    function firstName(x) {
+      var given = String((x && (x.givenNames || x.given)) || '').trim().split(/\s+/)[0];
+      return given || F.shortName(x) || 'Unknown';
+    }
+
     function coalesceFamilies(fams) {
       var out = [];
       var byPair = {};
@@ -188,7 +200,7 @@ window.FamilyTreePerson = (function () {
         person.id +
         '&view=pedigree" data-help="person.tree">\uD83C\uDF33 Tree</a>' +
         '<button class="btn" type="button" id="btnRelated" data-help="person.related">' +
-        (relatedLabel()) +
+        'Related to…' +
         '</button>' +
         '<button class="btn" type="button" id="btnShare" data-help="person.share">Share</button>' +
         '<button class="btn" type="button" id="btnPhoto" data-help="person.photo">\uD83D\uDCF7 Photo</button>' +
@@ -207,16 +219,9 @@ window.FamilyTreePerson = (function () {
       };
     }
 
-    function relatedLabel() {
-      var me = A.getMe();
-      if (me && me.selfPersonId && me.selfPersonId !== p().id) return 'How am I related?';
-      return 'Related to\u2026';
-    }
-
     function openRelated(fromId) {
       var person = p();
-      var me = A.getMe();
-      var start = fromId || (me && me.selfPersonId && me.selfPersonId !== person.id ? me.selfPersonId : '');
+      var start = fromId || '';
       if (!start) {
         U.openPersonPicker('Who is ' + F.shortName(person) + ' related to?', function (x) {
           openRelated(x.id);
@@ -468,10 +473,18 @@ window.FamilyTreePerson = (function () {
             (f.marriage.placeText ? ', ' + U.esc(f.marriage.placeText) : '') +
             '</div>';
         }
-        html += '<div style="padding-left:.6rem;border-left:2px solid var(--line);margin-left:1.3rem">';
+        if (other) {
+          html +=
+            '<div class="fam-children__label">Children of ' +
+            U.esc(firstName(person)) +
+            ' and ' +
+            U.esc(firstName(other)) +
+            '</div>';
+        }
+        html += '<div class="fam-children">';
         html += kids.length
           ? personRows(kids, function (x) {
-              return x.relationType && x.relationType !== 'birth' ? { tag: x.relationType } : null;
+              return { tag: childTag(x) };
             })
           : '<p class="empty">No children recorded.</p>';
         html += '</div></div>';

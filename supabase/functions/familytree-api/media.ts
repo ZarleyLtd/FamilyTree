@@ -6,6 +6,7 @@ import { Client } from "https://deno.land/x/postgres@v0.19.3/mod.ts";
 import { parseGenDate, statusErr, writeLog } from "./genealogy.ts";
 
 const MAX_BYTES = 150 * 1024;
+const APP_STORAGE_LIMIT_BYTES = 100 * 1024 * 1024;
 const KINDS = new Set([
   "photo",
   "portrait",
@@ -827,11 +828,18 @@ export async function storageUsage(
     FROM familytree.media
     WHERE tree_id = ${tree.id}::uuid AND deleted_at IS NULL
   `;
+  const all = await pg.queryObject<{ bytes: number }>`
+    SELECT coalesce(sum(byte_size), 0)::bigint AS bytes
+    FROM familytree.media
+    WHERE deleted_at IS NULL
+  `;
   const row = r.rows[0];
   return {
     count: Number(row?.n) || 0,
     bytes: Number(row?.bytes) || 0,
-    quotaBytes: 1024 * 1024 * 1024,
-    note: "This tree's files, measured against the shared 1 GB Apps project quota.",
+    appBytes: Number(all.rows[0]?.bytes) || 0,
+    // Self-imposed budget for this app (the shared Apps project allows 1 GB).
+    quotaBytes: APP_STORAGE_LIMIT_BYTES,
+    note: "All Family Tree files, measured against this app's 100 MB limit.",
   };
 }

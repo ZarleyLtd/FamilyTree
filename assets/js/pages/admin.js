@@ -96,22 +96,27 @@ window.FamilyTreeAdmin = (function () {
       API.storageUsage()
         .then(function (usage) {
           var bytes = Number(usage.bytes) || 0;
-          var quota = Number(usage.quotaBytes) || 1024 * 1024 * 1024;
-          var pct = Math.max(bytes ? 1 : 0, Math.min(100, (bytes / quota) * 100));
+          var appBytes = usage.appBytes != null ? Number(usage.appBytes) || 0 : bytes;
+          var quota = Number(usage.quotaBytes) || 100 * 1024 * 1024;
+          var pct = Math.max(appBytes ? 1 : 0, Math.min(100, (appBytes / quota) * 100));
           $('#storageBox').innerHTML =
             '<div class="small">' +
+            fmtBytes(appBytes) +
+            ' of ' +
+            fmtBytes(quota) +
+            ' used (' +
+            Math.round((appBytes / quota) * 100) +
+            '%) \u00b7 this tree: ' +
             fmtBytes(bytes) +
             ' in ' +
             (usage.count || 0) +
             ' file' +
             (usage.count === 1 ? '' : 's') +
-            ' \u00b7 shared project quota ' +
-            fmtBytes(quota) +
             '</div><div class="bar"><span style="width:' +
             pct.toFixed(2) +
             '%"></span></div>' +
             '<p class="muted small">' +
-            U.esc(usage.note || 'Measured against the shared Apps project quota.') +
+            U.esc(usage.note || "Measured against this app's 100 MB limit.") +
             '</p>';
         })
         .catch(function (e) {
