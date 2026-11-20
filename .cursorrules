@@ -17,6 +17,11 @@ Collaborative family tree viewer/editor. Phone-first, desktop-equal. Static site
 - Canonical spec: `../cursor-sites-shared/ui/BRIEF_MESSAGE.md` – sync via `../cursor-sites-shared/scripts/sync-ui.ps1`.
 - Implementation: `BriefMessage.show(text, anchorEl, options)` in `/assets/js/utils/brief-message.js`; styles in `/assets/css/brief-message.css`.
 
+## Contextual help (shared CursorSites pattern; this app is the reference)
+- Canonical spec: `../cursor-sites-shared/ui/CONTEXTUAL_HELP.md`. Not synced — the catalog is app copy.
+- Engine: `ContextualHelp.init()` in `/assets/js/components/contextual-help.js`; styles in `/assets/css/contextual-help.css`.
+- Catalog: `/assets/js/utils/help-catalog.js`. Mark controls with `data-help`; the **?** button is `data-help-toggle` (header, sheets, lightbox). Copy explains the feature, never a particular record.
+
 ## Rules for AI (Cursor)
 1. **Script loading order**: config → utils → components → pages → main.js.
 2. **Relative paths only** (`assets/css/style.css`, not `/assets/...`). Never embed `http://localhost` or drive letters.
